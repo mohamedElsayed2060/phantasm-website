@@ -4,16 +4,20 @@ import path from 'path'
 import { buildConfig, PayloadRequest } from 'payload'
 import { fileURLToPath } from 'url'
 
-import { Categories } from './collections/Categories'
 import { Media } from './collections/Media'
-import { Pages } from './collections/Pages'
-import { Posts } from './collections/Posts'
+
 import { Users } from './collections/Users'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
-import { plugins } from './plugins'
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL } from './utilities/getURL'
+import { PlayerSelection } from './globals/playerSelection'
+import { SiteSettings } from './globals/siteSettings'
+import { SceneHotspots } from './collections/SceneHotspots'
+import { DialogSettings } from './globals/DialogSettings'
+import { Scene } from './globals/Scene'
+import { Projects } from './collections/Projects'
+// import { getDialogSettings } from './lib/cms'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -60,10 +64,10 @@ export default buildConfig({
   db: mongooseAdapter({
     url: process.env.DATABASE_URL || '',
   }),
-  collections: [Pages, Posts, Media, Categories, Users],
+  collections: [Media, Users, SceneHotspots, Projects],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer],
-  plugins,
+  globals: [Header, Footer, PlayerSelection, SiteSettings, Scene, DialogSettings],
+  plugins: [],
   secret: process.env.PAYLOAD_SECRET,
   sharp,
   typescript: {

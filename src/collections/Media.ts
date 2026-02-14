@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url'
 
 import { anyone } from '../access/anyone'
 import { authenticated } from '../access/authenticated'
+import { skipImageSizesForGif } from '@/hooks/skipImageSizesForGif'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -17,6 +18,9 @@ const dirname = path.dirname(filename)
 export const Media: CollectionConfig = {
   slug: 'media',
   folders: true,
+  hooks: {
+    beforeChange: [skipImageSizesForGif],
+  },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -41,6 +45,7 @@ export const Media: CollectionConfig = {
   ],
   upload: {
     // Upload to the public/media directory in Next.js making them publicly accessible even outside of Payload
+    mimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml', 'image/gif'],
     staticDir: path.resolve(dirname, '../../public/media'),
     adminThumbnail: 'thumbnail',
     focalPoint: true,

@@ -15,19 +15,10 @@ import { getClientSideURL } from '@/utilities/getURL'
 const baseClass = 'admin-bar'
 
 const collectionLabels = {
-  pages: {
-    plural: 'Pages',
-    singular: 'Page',
-  },
-  posts: {
-    plural: 'Posts',
-    singular: 'Post',
-  },
-  projects: {
-    plural: 'Projects',
-    singular: 'Project',
-  },
+  projects: { plural: 'Projects', singular: 'Project' },
 }
+
+const collection = 'projects'
 
 const Title: React.FC = () => <span>Dashboard</span>
 
