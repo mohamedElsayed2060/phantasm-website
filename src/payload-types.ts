@@ -71,6 +71,7 @@ export interface Config {
     users: User;
     'scene-hotspots': SceneHotspot;
     projects: Project;
+    'contact-messages': ContactMessage;
     'payload-kv': PayloadKv;
     'payload-folders': FolderInterface;
     'payload-locked-documents': PayloadLockedDocument;
@@ -87,6 +88,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     'scene-hotspots': SceneHotspotsSelect<false> | SceneHotspotsSelect<true>;
     projects: ProjectsSelect<false> | ProjectsSelect<true>;
+    'contact-messages': ContactMessagesSelect<false> | ContactMessagesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-folders': PayloadFoldersSelect<false> | PayloadFoldersSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -101,17 +103,23 @@ export interface Config {
     header: Header;
     footer: Footer;
     'player-selection': PlayerSelection;
+    islandBootDock: IslandBootDock;
     'site-settings': SiteSetting;
+    islandScene: IslandScene;
     scene: Scene;
     'dialog-settings': DialogSetting;
+    'home-dock': HomeDock;
   };
   globalsSelect: {
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
     'player-selection': PlayerSelectionSelect<false> | PlayerSelectionSelect<true>;
+    islandBootDock: IslandBootDockSelect<false> | IslandBootDockSelect<true>;
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
+    islandScene: IslandSceneSelect<false> | IslandSceneSelect<true>;
     scene: SceneSelect<false> | SceneSelect<true>;
     'dialog-settings': DialogSettingsSelect<false> | DialogSettingsSelect<true>;
+    'home-dock': HomeDockSelect<false> | HomeDockSelect<true>;
   };
   locale: null;
   user: User;
@@ -289,32 +297,18 @@ export interface User {
  */
 export interface SceneHotspot {
   id: string;
-  order: number;
-  label: string;
+  name: string;
   x: number;
   y: number;
-  icon?: (string | null) | Media;
-  hotspotIdleW?: number | null;
-  hotspotIdleH?: number | null;
-  buildingPlaceholder?: (string | null) | Media;
-  buildingSpawn?: (string | null) | Media;
-  spawnDurationMs?: number | null;
-  buildingW?: number | null;
-  buildingH?: number | null;
   anchorX?: number | null;
   anchorY?: number | null;
-  intro?: {
-    enabled?: boolean | null;
-    title?: string | null;
-    preferredPlacement?: ('auto' | 'bottom' | 'top') | null;
-    paragraphs?:
-      | {
-          text: string;
-          id?: string | null;
-        }[]
-      | null;
-  };
+  buildingW?: number | null;
+  buildingH?: number | null;
+  hotspotIdle?: (string | null) | Media;
+  buildingSpawn?: (string | null) | Media;
+  buildingLoop?: (string | null) | Media;
   projects?: (string | Project)[] | null;
+  order?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -324,16 +318,40 @@ export interface SceneHotspot {
  */
 export interface Project {
   id: string;
-  order: number;
   title: string;
-  tag?: string | null;
-  shortDescription?: string | null;
-  thumb?: (string | null) | Media;
   /**
-   * Used later for /projects/[slug]. Leave empty for now if you want.
+   * يُستخدم في /project-details/[slug]
    */
-  slug?: string | null;
-  hotspot?: (string | null) | SceneHotspot;
+  slug: string;
+  shortDescription?: string | null;
+  detailsText?: string | null;
+  previewImage?: (string | null) | Media;
+  ctaLabel?: string | null;
+  ctaType?: ('route' | 'external') | null;
+  ctaUrl?: string | null;
+  dialogPages?:
+    | {
+        text: string;
+        id?: string | null;
+      }[]
+    | null;
+  order?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "contact-messages".
+ */
+export interface ContactMessage {
+  id: string;
+  source?: string | null;
+  name: string;
+  email: string;
+  phone?: string | null;
+  message: string;
+  userAgent?: string | null;
+  pageUrl?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -376,6 +394,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'projects';
         value: string | Project;
+      } | null)
+    | ({
+        relationTo: 'contact-messages';
+        value: string | ContactMessage;
       } | null)
     | ({
         relationTo: 'payload-folders';
@@ -545,34 +567,18 @@ export interface UsersSelect<T extends boolean = true> {
  * via the `definition` "scene-hotspots_select".
  */
 export interface SceneHotspotsSelect<T extends boolean = true> {
-  order?: T;
-  label?: T;
+  name?: T;
   x?: T;
   y?: T;
-  icon?: T;
-  hotspotIdleW?: T;
-  hotspotIdleH?: T;
-  buildingPlaceholder?: T;
-  buildingSpawn?: T;
-  spawnDurationMs?: T;
-  buildingW?: T;
-  buildingH?: T;
   anchorX?: T;
   anchorY?: T;
-  intro?:
-    | T
-    | {
-        enabled?: T;
-        title?: T;
-        preferredPlacement?: T;
-        paragraphs?:
-          | T
-          | {
-              text?: T;
-              id?: T;
-            };
-      };
+  buildingW?: T;
+  buildingH?: T;
+  hotspotIdle?: T;
+  buildingSpawn?: T;
+  buildingLoop?: T;
   projects?: T;
+  order?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -581,13 +587,36 @@ export interface SceneHotspotsSelect<T extends boolean = true> {
  * via the `definition` "projects_select".
  */
 export interface ProjectsSelect<T extends boolean = true> {
-  order?: T;
   title?: T;
-  tag?: T;
-  shortDescription?: T;
-  thumb?: T;
   slug?: T;
-  hotspot?: T;
+  shortDescription?: T;
+  detailsText?: T;
+  previewImage?: T;
+  ctaLabel?: T;
+  ctaType?: T;
+  ctaUrl?: T;
+  dialogPages?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
+  order?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "contact-messages_select".
+ */
+export interface ContactMessagesSelect<T extends boolean = true> {
+  source?: T;
+  name?: T;
+  email?: T;
+  phone?: T;
+  message?: T;
+  userAgent?: T;
+  pageUrl?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -714,6 +743,21 @@ export interface PlayerSelection {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "islandBootDock".
+ */
+export interface IslandBootDock {
+  id: string;
+  enabled?: boolean | null;
+  title: string;
+  pages: {
+    text: string;
+    id?: string | null;
+  }[];
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site-settings".
  */
 export interface SiteSetting {
@@ -726,6 +770,17 @@ export interface SiteSetting {
     backgroundBlur?: string | null;
     showEveryVisit?: boolean | null;
   };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "islandScene".
+ */
+export interface IslandScene {
+  id: string;
+  background?: (string | null) | Media;
+  maxZoomMult?: number | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -756,6 +811,75 @@ export interface DialogSetting {
   hudPosition: 'bottom' | 'top';
   enableSound?: boolean | null;
   defaultSpeakerName?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "home-dock".
+ */
+export interface HomeDock {
+  id: string;
+  enabled?: boolean | null;
+  showOnlyOnHome?: boolean | null;
+  launcher?: {
+    position?: ('bottom-left' | 'bottom-right') | null;
+    offsetX?: number | null;
+    offsetY?: number | null;
+  };
+  assets?: {
+    openGif?: (string | null) | Media;
+    staticPhone?: (string | null) | Media;
+  };
+  timing?: {
+    spawnMs?: number | null;
+  };
+  ui?: {
+    animateIconsOnOpen?: boolean | null;
+    iconsStaggerMs?: number | null;
+  };
+  screens?:
+    | {
+        key: string;
+        title: string;
+        icon?: (string | null) | Media;
+        type: 'messageForm' | 'locationsList' | 'phonesList';
+        message?: {
+          submitLabel?: string | null;
+          successText?: string | null;
+          recipientEmail?: string | null;
+        };
+        locations?:
+          | {
+              title: string;
+              address: string;
+              highlight?: boolean | null;
+              id?: string | null;
+            }[]
+          | null;
+        phones?:
+          | {
+              label: string;
+              phone: string;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  items?:
+    | {
+        order?: number | null;
+        label: string;
+        icon?: (string | null) | Media;
+        slot: 'top' | 'bottom';
+        type: 'internal' | 'route' | 'external';
+        screenKey?: string | null;
+        routePath?: string | null;
+        externalUrl?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -828,6 +952,23 @@ export interface PlayerSelectionSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "islandBootDock_select".
+ */
+export interface IslandBootDockSelect<T extends boolean = true> {
+  enabled?: T;
+  title?: T;
+  pages?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site-settings_select".
  */
 export interface SiteSettingsSelect<T extends boolean = true> {
@@ -841,6 +982,17 @@ export interface SiteSettingsSelect<T extends boolean = true> {
         backgroundBlur?: T;
         showEveryVisit?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "islandScene_select".
+ */
+export interface IslandSceneSelect<T extends boolean = true> {
+  background?: T;
+  maxZoomMult?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
@@ -871,6 +1023,85 @@ export interface DialogSettingsSelect<T extends boolean = true> {
   hudPosition?: T;
   enableSound?: T;
   defaultSpeakerName?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "home-dock_select".
+ */
+export interface HomeDockSelect<T extends boolean = true> {
+  enabled?: T;
+  showOnlyOnHome?: T;
+  launcher?:
+    | T
+    | {
+        position?: T;
+        offsetX?: T;
+        offsetY?: T;
+      };
+  assets?:
+    | T
+    | {
+        openGif?: T;
+        staticPhone?: T;
+      };
+  timing?:
+    | T
+    | {
+        spawnMs?: T;
+      };
+  ui?:
+    | T
+    | {
+        animateIconsOnOpen?: T;
+        iconsStaggerMs?: T;
+      };
+  screens?:
+    | T
+    | {
+        key?: T;
+        title?: T;
+        icon?: T;
+        type?: T;
+        message?:
+          | T
+          | {
+              submitLabel?: T;
+              successText?: T;
+              recipientEmail?: T;
+            };
+        locations?:
+          | T
+          | {
+              title?: T;
+              address?: T;
+              highlight?: T;
+              id?: T;
+            };
+        phones?:
+          | T
+          | {
+              label?: T;
+              phone?: T;
+              id?: T;
+            };
+        id?: T;
+      };
+  items?:
+    | T
+    | {
+        order?: T;
+        label?: T;
+        icon?: T;
+        slot?: T;
+        type?: T;
+        screenKey?: T;
+        routePath?: T;
+        externalUrl?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

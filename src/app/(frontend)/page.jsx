@@ -1,22 +1,16 @@
-// src/app/(frontend)/page.jsx
-import IslandScene from '@/components/island/IslandScene/IslandScene'
-import { getHomeSceneData } from '@/lib/cms'
+// C:\Users\mohamed\Desktop\island-map-real\phantasm-web\src\app\(frontend)\island-rzp\page.jsx
 
-export default async function HomePage() {
-  const { scene, hotspots } = await getHomeSceneData()
+import IslandLab from '@/components/island/Island-latest/IslandLab'
+import { getIslandScene, getIslandHotspots, getIslandBootDock } from '@/lib/islandCms'
 
-  return (
-    <main className="min-h-[100dvh] bg-black text-white">
-      <IslandScene
-        sceneKey={scene?.sceneKey || 'phantasm-v1'}
-        backgroundSrc={scene?.background?.url || '/island.gif'}
-        hotspots={hotspots || []}
-        canvasWidths={{
-          desktop: scene?.canvasWidthDesktop ?? scene?.canvasWidth ?? 2000,
-          tablet: scene?.canvasWidthTablet ?? scene?.canvasWidth ?? 1600,
-          mobile: scene?.canvasWidthMobile ?? scene?.canvasWidth ?? 1200,
-        }}
-      />
-    </main>
-  )
+export const revalidate = 30
+
+export default async function Page() {
+  const [hotspots, scene, bootDock] = await Promise.all([
+    getIslandHotspots(),
+    getIslandScene(),
+    getIslandBootDock(),
+  ])
+
+  return <IslandLab scene={scene} hotspots={hotspots} bootDock={bootDock} />
 }

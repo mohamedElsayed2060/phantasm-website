@@ -17,6 +17,10 @@ import { SceneHotspots } from './collections/SceneHotspots'
 import { DialogSettings } from './globals/DialogSettings'
 import { Scene } from './globals/Scene'
 import { Projects } from './collections/Projects'
+import { IslandScene } from './globals/IslandScene'
+import IslandBootDock from './globals/IslandBootDock'
+import { HomeDock } from './globals/HomeDock'
+import { ContactMessages } from './collections/ContactMessages'
 // import { getDialogSettings } from './lib/cms'
 
 const filename = fileURLToPath(import.meta.url)
@@ -64,9 +68,19 @@ export default buildConfig({
   db: mongooseAdapter({
     url: process.env.DATABASE_URL || '',
   }),
-  collections: [Media, Users, SceneHotspots, Projects],
+  collections: [Media, Users, SceneHotspots, Projects, ContactMessages],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer, PlayerSelection, SiteSettings, Scene, DialogSettings],
+  globals: [
+    Header,
+    Footer,
+    PlayerSelection,
+    IslandBootDock,
+    SiteSettings,
+    IslandScene,
+    Scene,
+    DialogSettings,
+    HomeDock,
+  ],
   plugins: [],
   secret: process.env.PAYLOAD_SECRET,
   sharp,

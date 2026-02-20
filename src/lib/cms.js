@@ -78,113 +78,6 @@ export async function getDialogSettings() {
   }).catch(() => null)
 }
 
-// ==========================
-// ✅ Normalizers
-// ==========================
-function toNum(v, fallback = 0) {
-  const n = Number(v)
-  return Number.isFinite(n) ? n : fallback
-}
-
-function normalizeProject(p) {
-  if (!p) return null
-  const id = p.id || p._id || p.slug || p.title
-  return {
-    ...p,
-    id,
-    title: String(p.title || ''),
-    tag: p.tag ? String(p.tag) : null,
-    shortDescription: p.shortDescription ? String(p.shortDescription) : null,
-    thumbSrc: imgUrl(p.thumb),
-    order: toNum(p.order, 0),
-    slug: p.slug ? String(p.slug) : null,
-  }
-}
-
-function normalizeHotspot(spot) {
-  if (!spot) return null
-
-  const id = spot.id || spot._id || spot.slug || spot.label
-
-  const intro = spot.intro || null
-  const introParagraphsRaw = Array.isArray(intro?.paragraphs) ? intro.paragraphs : []
-  const introParagraphs = introParagraphsRaw
-    .map((x) => (x?.text ? String(x.text) : ''))
-    .filter(Boolean)
-
-  const projectsRaw = Array.isArray(spot.projects) ? spot.projects : []
-  const projects = projectsRaw
-    .map(normalizeProject)
-    .filter(Boolean)
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-
-  return {
-    ...spot,
-
-    id,
-    label: String(spot.label || ''),
-
-    x: toNum(spot.x, 0),
-    y: toNum(spot.y, 0),
-    order: toNum(spot.order, 0),
-
-    // ✅ Hotspot icon
-    hotspotIdleSrc: imgUrl(spot.icon),
-    hotspotIdleW: toNum(spot.hotspotIdleW, 96),
-    hotspotIdleH: toNum(spot.hotspotIdleH, 96),
-
-    // ✅ Building assets (loop + spawn)
-    buildingLoopSrc: imgUrl(spot.buildingPlaceholder),
-    buildingSpawnSrc: imgUrl(spot.buildingSpawn),
-    buildingW: toNum(spot.buildingW, 220),
-    buildingH: toNum(spot.buildingH, 220),
-    spawnDurationMs: toNum(spot.spawnDurationMs, 1400),
-
-    // ✅ Anchor
-    anchorX: toNum(spot.anchorX, 50),
-    anchorY: toNum(spot.anchorY, 92),
-
-    // ✅ Intro dialog
-    introEnabled: intro?.enabled !== false,
-    introTitle: intro?.title ? String(intro.title) : String(spot.label || ''),
-    introPlacement: intro?.preferredPlacement || 'auto',
-    introParagraphs,
-
-    // ✅ Projects
-    projects,
-  }
-}
-
-// ==========================
-// ✅ Home Scene data
-// - scene global + hotspots collection
-// ==========================
-export async function getHomeSceneData() {
-  const [scene, hotspotsRes] = await Promise.all([
-    fetchJSON('/api/globals/scene?depth=2', {
-      revalidate: RV,
-      tags: ['global:scene'],
-    }).catch(() => null),
-
-    fetchJSON('/api/scene-hotspots?limit=200&sort=order&depth=3', {
-      revalidate: RV,
-      tags: ['collection:scene-hotspots'],
-    }).catch(() => null),
-  ])
-
-  const raw = hotspotsRes?.docs ?? []
-  const hotspots = Array.isArray(raw)
-    ? raw
-        .map(normalizeHotspot)
-        .filter(Boolean)
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    : []
-
-  return {
-    scene,
-    hotspots,
-  }
-}
 export async function getProjectBySlug(slug, opts = {}) {
   const safeSlug = encodeURIComponent(String(slug || '').trim())
 
@@ -199,14 +92,22 @@ export async function getProjectBySlug(slug, opts = {}) {
   return doc
 }
 
+export async function getHomeDock() {
+  return fetchJSON('/api/globals/home-dock?depth=2', {
+    revalidate: RV,
+    tags: ['global:home-dock'],
+  }).catch(() => null)
+}
 // ==========================
 // ✅ Layout props (if needed later)
 // ==========================
 export async function getFrontendGlobals() {
-  const [siteSettings, playerSelection, dialogSettings] = await Promise.all([
+  const [siteSettings, playerSelection, dialogSettings, homeDock] = await Promise.all([
     getSiteSettings(),
     getPlayerSelection(),
     getDialogSettings(),
+    getHomeDock(),
   ])
-  return { siteSettings, playerSelection, dialogSettings }
+
+  return { siteSettings, playerSelection, dialogSettings, homeDock }
 }

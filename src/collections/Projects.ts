@@ -2,66 +2,88 @@ import type { CollectionConfig } from 'payload'
 
 export const Projects: CollectionConfig = {
   slug: 'projects',
-  access: {
-    read: () => true, // ✅ public read (frontend needs it)
-  },
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'tag', 'order', 'updatedAt'],
+    defaultColumns: ['title', 'slug', 'order', 'updatedAt'],
+  },
+  access: {
+    read: () => true, // ✅ public
   },
   fields: [
     {
-      name: 'order',
-      label: 'Order',
-      type: 'number',
-      defaultValue: 0,
-      required: true,
-      admin: { step: 1 },
-    },
-    {
       name: 'title',
-      label: 'Title',
       type: 'text',
       required: true,
+      localized: true,
     },
-    {
-      name: 'tag',
-      label: 'Tag (optional)',
-      type: 'text',
-      required: false,
-    },
-    {
-      name: 'shortDescription',
-      label: 'Short description (panel)',
-      type: 'textarea',
-      required: false,
-    },
-    {
-      name: 'thumb',
-      label: 'Thumbnail (optional)',
-      type: 'upload',
-      relationTo: 'media',
-      required: false,
-    },
-
-    // ✅ optional: link to details page later
     {
       name: 'slug',
-      label: 'Slug (optional)',
       type: 'text',
-      required: false,
+      required: true,
+      unique: true,
+      admin: { description: 'يُستخدم في /project-details/[slug]' },
+    },
+
+    // ✅ للّستة (ProjectsPopover)
+    {
+      name: 'shortDescription',
+      type: 'textarea',
+      localized: true,
+    },
+
+    // ✅ للتفاصيل الصغيرة (ProjectDetailsPanel)
+    {
+      name: 'detailsText',
+      type: 'textarea',
+      localized: true,
+    },
+    {
+      name: 'previewImage',
+      type: 'upload',
+      relationTo: 'media',
+    },
+    {
+      name: 'ctaLabel',
+      type: 'text',
+      localized: true,
+      defaultValue: 'CHECK IT OUT',
+    },
+    {
+      name: 'ctaType',
+      type: 'select',
+      options: [
+        { label: 'Route (project-details)', value: 'route' },
+        { label: 'External URL', value: 'external' },
+      ],
+      defaultValue: 'route',
+    },
+    {
+      name: 'ctaUrl',
+      type: 'text',
       admin: {
-        description: 'Used later for /projects/[slug]. Leave empty for now if you want.',
+        condition: (_, siblingData) => siblingData?.ctaType === 'external',
       },
     },
 
-    // ✅ optional: reverse link if you want (not required for now)
+    // ✅ للديالوج (ProjectDialogPanel) — صفحات نص
     {
-      name: 'hotspot',
-      label: 'Hotspot (optional)',
-      type: 'relationship',
-      relationTo: 'scene-hotspots',
-      required: false,
+      name: 'dialogPages',
+      type: 'array',
+      fields: [
+        {
+          name: 'text',
+          type: 'textarea',
+          localized: true,
+          required: true,
+        },
+      ],
+    },
+
+    // ✅ ترتيب المشروع داخل مبنى واحد
+    {
+      name: 'order',
+      type: 'number',
+      defaultValue: 0,
     },
   ],
 }

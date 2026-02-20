@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import PixelFrameOverlay from '@/components/ui/PixelFrameOverlay'
 
 const LS_PLAYER = 'phantasm:player'
 
 export default function AvatarGate({ config, allowOpen = true }) {
   const enabled = config?.enabled !== false
-  const players = config?.players || []
+  const players = Array.isArray(config?.players) ? config.players : []
   const title = config?.title || 'Pick Your Player'
 
   const [ready, setReady] = useState(false)
@@ -32,83 +33,162 @@ export default function AvatarGate({ config, allowOpen = true }) {
     }
     localStorage.setItem(LS_PLAYER, JSON.stringify(payload))
     setSelected(payload)
+    try {
+      window.dispatchEvent(new CustomEvent('phantasm:playerSelected', { detail: payload }))
+    } catch {}
+  }
+
+  const ease = [0.22, 1, 0.36, 1]
+
+  // ── Title: slides in from bottom, stops right above cards ──
+  const titleV = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease } },
+  }
+
+  // ── Cards: unfold from vertical center outward, after title ──
+  const cardV = {
+    hidden: { opacity: 0, scaleY: 0 },
+    show: (i) => ({
+      opacity: 1,
+      scaleY: 1,
+      transition: {
+        delay: 0.5 + i * 0.08, // title finishes ~0.4s, then cards start
+        duration: 0.55,
+        ease,
+      },
+    }),
+    exit: (i) => ({
+      opacity: 0,
+      scaleY: 0,
+      transition: { delay: i * 0.03, duration: 0.2, ease },
+    }),
   }
 
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          className="fixed inset-0 z-[9999]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
         >
-          {/* backdrop blur */}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
-
-          {/* panel: open from center (up/down) */}
-          <motion.div
-            className="relative w-[min(980px,92vw)] rounded-2xl border border-white/15 bg-[#140b0b]/85 shadow-[0_30px_80px_rgba(0,0,0,0.55)] overflow-hidden"
-            initial={{ scaleY: 0, opacity: 0 }}
-            animate={{ scaleY: 1, opacity: 1 }}
-            exit={{ scaleY: 0, opacity: 0 }}
-            transition={{ duration: 0.6, ease: [0.19, 1, 0.22, 1] }}
-            style={{ transformOrigin: 'center' }}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+          <div
+            className="absolute inset-0 z-[1] overflow-y-auto"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            {/* header */}
-            <motion.div
-              className="px-6 py-4 text-center"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.5 }}
-            >
-              <div className="inline-block rounded-md border border-white/20 bg-black/30 px-5 py-2 text-sm tracking-[0.25em] text-white/90">
-                {String(title).toUpperCase()}
-              </div>
-            </motion.div>
-
-            {/* grid */}
-            <div className="px-6 pb-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                {players.map((p, idx) => (
-                  <motion.button
-                    key={p.id || idx}
-                    type="button"
-                    onClick={() => pick(p)}
-                    className="group text-left rounded-xl border border-white/15 bg-black/25 hover:bg-black/35 transition overflow-hidden"
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 + idx * 0.06, duration: 0.45 }}
+            <div className="min-h-full flex items-center justify-center py-8 px-4">
+              <div className="flex flex-col items-center gap-3 w-[min(1200px,100%)]">
+                {/* ── Title ── */}
+                <motion.div variants={titleV} initial="hidden" animate="show" className="w-full">
+                  <PixelFrameOverlay
+                    frameSrc="/frames/title-fram.png"
+                    slice={16}
+                    bw={15}
+                    pad={0}
+                    className="w-full text-center"
                   >
-                    <div className="p-3">
-                      <div className="aspect-[4/3] rounded-lg border border-white/10 bg-black/40 flex items-center justify-center overflow-hidden">
-                        {p.avatarImage?.url ? (
-                          <img
-                            src={p.avatarImage.url}
-                            alt={p.name || 'player'}
-                            className="h-full w-full object-contain group-hover:scale-[1.03] transition"
-                            draggable={false}
-                          />
-                        ) : (
-                          <div className="text-white/40 text-xs">NO IMAGE</div>
-                        )}
-                      </div>
-
-                      <div className="mt-3">
-                        <div className="inline-block rounded-md bg-red-700/70 px-3 py-1 text-[11px] tracking-[0.22em] text-white">
-                          {String(p.badgeLabel || p.name || 'PLAYER').toUpperCase()}
-                        </div>
-
-                        <div className="mt-2 text-[12px] leading-relaxed text-white/80 whitespace-pre-line">
-                          {p.description || ''}
-                        </div>
-                      </div>
+                    <div className="bg-[#951212] rounded-xl md:p-0 py-3">
+                      <p className="text-white text-[22px] sm:text-[45px] whitespace-nowrap text-center">
+                        {String(title).toUpperCase()}{' '}
+                      </p>
                     </div>
-                  </motion.button>
-                ))}
+                  </PixelFrameOverlay>
+                </motion.div>
+
+                {/* ── Cards grid ── */}
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4  gap-0 md:px-5 px-1">
+                  {players.map((p, idx) => {
+                    const img = p.avatarImage?.url
+                    const label = p.badgeLabel || p.name || 'PLAYER'
+                    const desc = p.description || ''
+
+                    return (
+                      <motion.button
+                        key={p.id || idx}
+                        type="button"
+                        custom={idx}
+                        variants={cardV}
+                        initial="hidden"
+                        animate="show"
+                        exit="exit"
+                        onClick={() => pick(p)}
+                        // whileHover={{
+                        //   y: -1,
+                        //   transition: { type: 'spring', stiffness: 240, damping: 24 },
+                        // }}
+                        // whileTap={{
+                        //   y: 1,
+                        //   scale: 0.98,
+                        //   transition: { type: 'spring', stiffness: 200, damping: 28 },
+                        // }}
+                        className="origin-center rounded-md bg-[#2A1616] text-left cursor-pointer
+                          focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                        style={{ transformOrigin: '50% 50%' }}
+                      >
+                        <PixelFrameOverlay
+                          frameSrc="/frames/CardFrame.png"
+                          slice={13}
+                          bw={15}
+                          pad={5}
+                          className="flex items-start md:inline-block "
+                        >
+                          {/* image */}
+
+                          <PixelFrameOverlay
+                            frameSrc="/frames/imgFrame.png"
+                            slice={15}
+                            bw={16}
+                            pad={5}
+                            className="my-[7px] sm:mt-[6px] mx-[4px] md:w-auto w-[500px]"
+                          >
+                            <div
+                              className="h-[150px] sm:h-[190px] flex items-center justify-center
+                                     bg-black/25 border-b border-white/15 overflow-hidden"
+                            >
+                              {img ? (
+                                <img
+                                  src={img}
+                                  alt={p.name || 'player'}
+                                  draggable={false}
+                                  className="h-[150px] sm:h-[190px] w-auto"
+                                  style={{ imageRendering: 'pixelated' }}
+                                />
+                              ) : (
+                                <div className="text-white/40 text-xs">NO IMAGE</div>
+                              )}
+                            </div>
+
+                            {/* badge */}
+                            <PixelFrameOverlay
+                              frameSrc="/frames/titleFrame.png"
+                              slice={16}
+                              bw={15}
+                              pad={0}
+                            >
+                              <div className="bg-[#b01010] mb-1">
+                                <div className="md:px-3 p-1 py-2 text-center text-white  tracking-[0.18em] md:text-[15px] text-[12px]">
+                                  {String(label).toUpperCase()}
+                                </div>
+                              </div>
+                            </PixelFrameOverlay>
+                          </PixelFrameOverlay>
+
+                          {/* description */}
+                          <div className="px-4 py-6 md:text-[15px] text-[13px] leading-relaxed text-white/85 whitespace-pre-line">
+                            {desc}
+                          </div>
+                        </PixelFrameOverlay>
+                      </motion.button>
+                    )
+                  })}
+                </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
