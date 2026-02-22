@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { imgUrl } from '@/lib/cms'
 import PixelFrameOverlay from '../ui/PixelFrameOverlay'
 import BackSvgIcon from './backSvgIcon'
+import PixelScrollTrack from '@/components/island/Island-latest/overlays/components/PixelScrollTrack'
+
 function sortByOrder(items = []) {
   return [...items].sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0))
 }
@@ -41,7 +43,16 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
   const [phase, setPhase] = useState('closed') // closed | spawning | open
   const [screenKey, setScreenKey] = useState('grid') // grid | message/locations/phones
   const timerRef = useRef(null)
-
+  useEffect(() => {
+    const locked = phase !== 'closed'
+    try {
+      window.dispatchEvent(
+        new CustomEvent('phantasm:overlayLock', {
+          detail: { key: 'homeDock', locked },
+        }),
+      )
+    } catch {}
+  }, [phase])
   useEffect(() => {
     return () => timerRef.current && clearTimeout(timerRef.current)
   }, [])
@@ -130,12 +141,11 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
               <button
                 type="button"
                 onClick={close}
-                className="absolute -top-2 -right-2 z-10 h-6 w-6 rounded-md
-                           bg-red-600 border border-white/20 shadow
-                           flex items-center justify-center"
+                className="absolute -top-1 -right-1 z-10 h-8 w-8"
                 aria-label="Close dock"
               >
-                <span className="text-white text-xs leading-none">×</span>
+                {/* <span className="text-white text-xs leading-none">×</span> */}
+                <img src="/close.png" alt="close" />
               </button>
 
               {/* spawning gif */}
@@ -144,7 +154,7 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                   src={openGifSrc}
                   alt="Opening"
                   draggable={false}
-                  className="block w-[210px] md:w-[240px] h-auto select-none"
+                  className="block w-[250px] md:w-[280px] h-auto select-none"
                   style={{ imageRendering: 'pixelated' }}
                 />
               ) : null}
@@ -156,7 +166,7 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                     src={staticPhoneSrc}
                     alt="Dock"
                     draggable={false}
-                    className="block w-[210px] md:w-[240px] h-auto select-none"
+                    className="block w-[250px] md:w-[280px] h-auto select-none"
                     style={{ imageRendering: 'pixelated' }}
                   />
 
@@ -219,10 +229,11 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                           {/* header: Back left, icon+title right */}
                           <div className="flex items-start justify-between mt-6">
                             <button
-                              className="ms-1 text-white/80 text-[10px] underline"
+                              className="ms-1  text-white/80 text-[10px] underline"
                               onClick={() => setScreenKey('grid')}
                             >
-                              <BackSvgIcon />
+                              {/* <BackSvgIcon /> */}
+                              <img className="w-7" src="/back-icon.png" alt="back-icon" />
                             </button>
 
                             <div className="flex flex-col items-center gap-1 ">
@@ -433,52 +444,151 @@ function MessageFormScreen({ submitLabel = 'SEND', successText = 'Message sent!'
 }
 
 function LocationsScreen({ locations = [] }) {
-  return (
-    <div className="space-y-2">
-      <div className="text-white/90 text-[11px] tracking-wide">LOCATIONS:</div>
+  const boxRef = useRef(null) // ✅ wrapper height (responsive)
+  const scrollRef = useRef(null)
 
-      <div className="h-[210px] overflow-auto rounded-md border border-white/20 bg-black/20 p-2">
-        <div className="space-y-2">
-          {locations.map((loc, idx) => (
-            <div
-              key={idx}
-              className={`rounded-md border border-white/15 p-2 ${
-                loc?.highlight ? 'bg-red-700/80' : 'bg-black/10'
-              }`}
-            >
-              <div className="text-white text-[10px] font-semibold">{loc?.title || ''}</div>
-              <div className="mt-1 text-white/85 text-[10px] leading-relaxed whitespace-pre-line">
-                {loc?.address || ''}
+  const [scrollState, setScrollState] = useState({
+    scrollTop: 0,
+    scrollHeight: 0,
+    clientHeight: 0,
+    trackHeight: 0,
+  })
+
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    const box = boxRef.current
+    if (!el || !box) return
+
+    const update = () => {
+      setScrollState({
+        scrollTop: el.scrollTop,
+        scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight,
+        trackHeight: box.clientHeight, // ✅ نفس ارتفاع البوكس
+      })
+    }
+
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    ro.observe(box)
+
+    return () => {
+      el.removeEventListener('scroll', update)
+      ro.disconnect()
+    }
+  }, [locations?.length])
+
+  const needsScroll = scrollState.scrollHeight > scrollState.clientHeight + 1
+
+  const handleScrollTo = (newScrollTop) => {
+    if (scrollRef.current) scrollRef.current.scrollTop = newScrollTop
+  }
+
+  return (
+    <div className="space-y-0">
+      {/* Header */}
+      <PixelFrameOverlay frameSrc="/frames/dock-frame.png" slice={10} bw={8} pad={0}>
+        <div className="p-3 rounded bg-black text-white text-[13px] tracking-wide">LOCATIONS:</div>
+      </PixelFrameOverlay>
+
+      {/* List + Pixel Scroll */}
+      <PixelFrameOverlay frameSrc="/frames/dock-frame.png" slice={10} bw={8} pad={0}>
+        <div className="p-2">
+          <div className="flex items-start gap-[6px]">
+            {/* ✅ responsive height wrapper */}
+            <div ref={boxRef} className="min-w-0 flex-1 h-[230px] sm:h-[240px] md:h-[290px]">
+              {/* ✅ scroll area fills wrapper */}
+              <div
+                ref={scrollRef}
+                className="h-full"
+                style={{
+                  overflowY: 'scroll',
+                  overflowX: 'hidden',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                }}
+              >
+                <style>{`.dock-loc::-webkit-scrollbar{display:none}`}</style>
+
+                <div className="dock-loc space-y-2">
+                  {locations.map((loc, idx) => {
+                    const isHi = !!loc?.highlight
+
+                    const card = (
+                      <div className={`p-2 flex gap-2 ${isHi ? 'bg-red-700/80' : 'bg-black/10'}`}>
+                        <div className="text-white font-semibold">
+                          {/* {loc?.title || ''} */}
+                          <img
+                            className="w-10 mt-1"
+                            src="/location-single-icon.png"
+                            alt="location"
+                          />
+                        </div>
+                        <div className="mt-1 text-white/85 text-[12px] sm:text-[14px] leading-relaxed whitespace-pre-line">
+                          {loc?.address || ''}
+                        </div>
+                      </div>
+                    )
+
+                    return isHi ? (
+                      <PixelFrameOverlay
+                        key={idx}
+                        frameSrc="/frames/titleFrame.png"
+                        slice={10}
+                        bw={8}
+                        pad={0}
+                      >
+                        {card}
+                      </PixelFrameOverlay>
+                    ) : (
+                      <div key={idx}>{card}</div>
+                    )
+                  })}
+
+                  {!locations?.length ? (
+                    <div className="text-white/70 text-[10px] p-2">No locations yet.</div>
+                  ) : null}
+                </div>
               </div>
             </div>
-          ))}
 
-          {!locations?.length ? (
-            <div className="text-white/70 text-[10px]">No locations yet.</div>
-          ) : null}
+            {/* ✅ pixel scrollbar uses measured height */}
+            {needsScroll ? (
+              <PixelScrollTrack
+                scrollTop={scrollState.scrollTop}
+                scrollHeight={scrollState.scrollHeight}
+                clientHeight={scrollState.clientHeight}
+                trackHeight={scrollState.trackHeight || scrollState.clientHeight}
+                onScrollTo={handleScrollTo}
+              />
+            ) : null}
+          </div>
         </div>
-      </div>
+      </PixelFrameOverlay>
     </div>
   )
 }
-
 function PhonesScreen({ phones = [] }) {
   return (
     <div className="space-y-2">
-      <div className="text-white/90 text-[11px] tracking-wide">CALL US</div>
+      <div className="text-white/90 text-[14px] tracking-wide mb-2">CALL US</div>
 
       <div className="space-y-3">
         {phones.map((p, idx) => (
           <div key={idx} className="space-y-1">
-            <div className="text-white/80 text-[10px] tracking-wide">{p?.label || ''}</div>
-
-            <a
-              href={p?.phone ? `tel:${String(p.phone).replace(/\s+/g, '')}` : '#'}
-              className="block w-full px-3 py-2 rounded-md bg-black/20 border border-white/20
-                         text-white text-[11px]"
-            >
-              {p?.phone || ''}
-            </a>
+            <div className="text-white/80 text-[13px] sm:text-[14px] tracking-wide">
+              {p?.label || ''}
+            </div>
+            <PixelFrameOverlay frameSrc="/frames/dock-frame.png" slice={10} bw={8} pad={0}>
+              <a
+                href={p?.phone ? `tel:${String(p.phone).replace(/\s+/g, '')}` : '#'}
+                className="block p-3 rounded bg-black text-white text-[13px] tracking-wide"
+              >
+                {p?.phone || ''}
+              </a>
+            </PixelFrameOverlay>
           </div>
         ))}
 

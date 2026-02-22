@@ -6,6 +6,7 @@ import BuildingPointer from './BuildingPointer'
 import ProjectDetailsPanel from './ProjectDetailsPanel'
 import ProjectDialogPanel from './ProjectDialogPanel'
 import { clampToViewportX } from '../utils'
+import useLockIslandGestures from '@/components/overlays/useLockIslandGestures'
 
 const POPOVER_W = 360
 const POPOVER_H = 170
@@ -35,6 +36,7 @@ export default function ProjectsOverlay({
 
   player,
 }) {
+  useLockIslandGestures(open)
   if (!open || !overlay) return null
 
   const mobile = isMobile(view.w)

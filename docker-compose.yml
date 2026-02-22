@@ -8,6 +8,7 @@ services:
     volumes:
       - .:/home/node/app
       - node_modules:/home/node/app/node_modules
+      - media_uploads:/home/node/app/public/media
     working_dir: /home/node/app/
     command: sh -c "yarn install && yarn dev"
     depends_on:
@@ -29,3 +30,4 @@ services:
 volumes:
   data:
   node_modules:
+  media_uploads:

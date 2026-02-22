@@ -23,7 +23,15 @@ export default function AvatarGate({ config, allowOpen = true }) {
   }, [])
 
   const isOpen = allowOpen && enabled && ready && !selected && players.length > 0
-
+  useEffect(() => {
+    try {
+      window.dispatchEvent(
+        new CustomEvent('phantasm:overlayLock', {
+          detail: { key: 'avatarGate', locked: Boolean(isOpen) },
+        }),
+      )
+    } catch {}
+  }, [isOpen])
   const pick = (p) => {
     const payload = {
       id: p.id,

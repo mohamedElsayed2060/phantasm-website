@@ -33,7 +33,7 @@ const POPOVER_W = 360
 const POPOVER_H = 190
 const POPOVER_MARGIN = 14
 const POPOVER_GAP = 14
-
+const LAST_TRANSFORM_KEY = 'phantasm:island:lastTransform'
 export default function IslandLab({ hotspots = [], scene, bootDock }) {
   const HOTSPOTS = Array.isArray(hotspots) ? hotspots : []
   const backgroundSrc = scene?.backgroundSrc
@@ -51,7 +51,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
   const lastViewRef = useRef({ w: 0, h: 0 })
 
   // ✅ discovered persistence
-  const [discoveredIds, setDiscoveredIds] = useState(() => new Set())
+  const [discoveredIds, setDiscoveredIds] = useState(() => loadDiscoveredIds())
   const [spawningId, setSpawningId] = useState(null)
   const spawnTimerRef = useRef(null)
 
@@ -156,6 +156,13 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
 
   const showLoading = !cmsReady
   // 1) اقرأ player مرة واحدة عند mount
+
+  useEffect(() => {
+    if (!sceneReady) return
+    try {
+      sessionStorage.setItem(LAST_TRANSFORM_KEY, JSON.stringify(transformState))
+    } catch {}
+  }, [sceneReady, transformState])
   useEffect(() => {
     try {
       const raw = localStorage.getItem('phantasm:player')
@@ -183,6 +190,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
           name: data?.name || prev.name,
           avatarSrc: data?.avatarImage ? toAbsoluteUrl(data.avatarImage) : prev.avatarSrc,
         }))
+        setDiscoveredIds(loadDiscoveredIds())
       } catch {}
     }
 
@@ -226,9 +234,9 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
   }, [backgroundSrc])
 
   // ✅ load discovered from LS once
-  useEffect(() => {
-    setDiscoveredIds(loadDiscoveredIds())
-  }, [])
+  // useEffect(() => {
+  //   setDiscoveredIds(loadDiscoveredIds())
+  // }, [])
 
   // ✅ save discovered to LS on change
   useEffect(() => {
@@ -368,7 +376,26 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     if (didInit.current) return
 
     didInit.current = true
-    reset({ duration: 0 })
+
+    // ✅ حاول restore transform (لو راجع Back)
+    let restored = false
+    try {
+      const raw = sessionStorage.getItem(LAST_TRANSFORM_KEY)
+      if (raw) {
+        const t = JSON.parse(raw)
+        const s = Math.max(Number(t?.scale || 0), coverScale)
+        const clamped = clampToBounds({
+          x: Number(t?.x || 0),
+          y: Number(t?.y || 0),
+          scale: s,
+        })
+        apiRef.current.setTransform(clamped.x, clamped.y, clamped.scale, 0, 'linear')
+        restored = true
+      }
+    } catch {}
+
+    // ✅ لو مفيش restore اعمل reset الطبيعي
+    if (!restored) reset({ duration: 0 })
 
     try {
       sessionStorage.setItem('phantasm:bootReady', '1')
