@@ -1,14 +1,18 @@
 // src/lib/cms.server.js
 
+import { headers } from 'next/headers'
+
 function getServerBaseUrl() {
   const base = process.env.NEXT_PUBLIC_CMS_URL || process.env.NEXT_PUBLIC_SITE_URL
 
-  if (!base) {
-    // ✅ fallback محلي
-    return 'http://localhost:3000'
-  }
+  if (base) return base.replace(/\/$/, '')
 
-  return base.replace(/\/$/, '')
+  // ✅ runtime fallback (Reverse proxy safe)
+  const h = headers()
+  const host = h.get('x-forwarded-host') || h.get('host')
+  const proto = h.get('x-forwarded-proto') || 'http'
+  if (!host) return 'http://localhost:3000'
+  return `${proto}://${host}`
 }
 
 export async function fetchJSONServer(
