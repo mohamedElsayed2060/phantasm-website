@@ -297,6 +297,10 @@ export interface User {
  */
 export interface SceneHotspot {
   id: string;
+  /**
+   * Hover works on desktop only. Mobile will still use tap.
+   */
+  trigger?: ('click' | 'hover') | null;
   name: string;
   x: number;
   y: number;
@@ -567,6 +571,7 @@ export interface UsersSelect<T extends boolean = true> {
  * via the `definition` "scene-hotspots_select".
  */
 export interface SceneHotspotsSelect<T extends boolean = true> {
+  trigger?: T;
   name?: T;
   x?: T;
   y?: T;

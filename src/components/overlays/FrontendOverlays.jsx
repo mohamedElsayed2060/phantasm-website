@@ -46,7 +46,7 @@ export default function FrontendOverlays({ globals }) {
   }, [])
 
   const anyOverlayLocked = (splashEnabled && !splashDone) || Object.values(locks).some(Boolean)
-
+  const isProjectsOpen = Boolean(locks?.projects)
   useLockIslandGestures(anyOverlayLocked)
   return (
     <>
@@ -63,9 +63,8 @@ export default function FrontendOverlays({ globals }) {
           window.dispatchEvent(new Event('phantasm:splashDone'))
         }}
       />
-
       <AvatarGate config={playerSelection} allowOpen={allowGate} />
-      <HomeDockOverlay config={homeDock} allowOpen={allowGate} />
+      <HomeDockOverlay config={homeDock} allowOpen={allowGate && !isProjectsOpen} />{' '}
     </>
   )
 }

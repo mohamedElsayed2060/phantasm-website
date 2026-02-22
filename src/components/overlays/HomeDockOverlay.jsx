@@ -512,7 +512,14 @@ function LocationsScreen({ locations = [] }) {
               >
                 <style>{`.dock-loc::-webkit-scrollbar{display:none}`}</style>
 
-                <div className="dock-loc space-y-2">
+                <div
+                  data-overlay-scroll="true"
+                  className="dock-loc space-y-2"
+                  style={{
+                    touchAction: 'pan-y',
+                    WebkitOverflowScrolling: 'touch',
+                  }}
+                >
                   {locations.map((loc, idx) => {
                     const isHi = !!loc?.highlight
 

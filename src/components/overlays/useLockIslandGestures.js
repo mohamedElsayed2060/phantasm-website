@@ -5,18 +5,42 @@ export default function useLockIslandGestures(locked) {
   useEffect(() => {
     if (!locked) return
 
-    const prevTouchAction = document.documentElement.style.touchAction
+    // نخلي الصفحة ما تعملش bounce عام، بس من غير ما نكتم سكرول الأوفرلاي
     const prevOverscroll = document.documentElement.style.overscrollBehavior
-    document.documentElement.style.touchAction = 'none'
     document.documentElement.style.overscrollBehavior = 'none'
 
+    const isInsideOverlayScroll = (target) => {
+      if (!target) return false
+      // أي عنصر عليه data-overlay-scroll يعتبر مسموحله بالسكرول
+      const el = target.closest?.('[data-overlay-scroll="true"]')
+      return Boolean(el)
+    }
+
     const onWheel = (e) => {
-      // يمنع ctrl+wheel و wheel عمومًا أثناء overlay
+      // ✅ دايمًا امنع ctrl+wheel (zoom للصفحة)
+      if (e.ctrlKey) {
+        e.preventDefault()
+        return
+      }
+
+      // ✅ لو داخل عنصر مسموح له بالسكرول → سيبه
+      if (isInsideOverlayScroll(e.target)) return
+
+      // ✅ غير كده: امنع pan/zoom على الجزيرة
       e.preventDefault()
     }
 
     const onTouchMove = (e) => {
-      // يمنع pinch/two-finger move
+      // ✅ امنع pinch (two fingers) دائمًا
+      if (e.touches && e.touches.length > 1) {
+        e.preventDefault()
+        return
+      }
+
+      // ✅ لو اللمس داخل عنصر مسموح له بالسكرول → سيبه
+      if (isInsideOverlayScroll(e.target)) return
+
+      // ✅ غير كده امنع gestures بتاعة الجزيرة
       e.preventDefault()
     }
 
@@ -26,7 +50,6 @@ export default function useLockIslandGestures(locked) {
     return () => {
       window.removeEventListener('wheel', onWheel)
       window.removeEventListener('touchmove', onTouchMove)
-      document.documentElement.style.touchAction = prevTouchAction
       document.documentElement.style.overscrollBehavior = prevOverscroll
     }
   }, [locked])

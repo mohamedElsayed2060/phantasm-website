@@ -1,18 +1,12 @@
 // src/lib/islandCms.js
-import { headers } from 'next/headers'
 import { imgUrl } from '@/lib/cms'
+import { fetchJSONServer } from './cms.server'
 
-async function getBaseUrl() {
-  // ✅ 1) لو محدد CMS URL (production أو لو الـ CMS على دومين تاني)
-  const envBase = process.env.NEXT_PUBLIC_CMS_URL || process.env.CMS_URL
-  if (envBase) return String(envBase).replace(/\/$/, '')
-
-  // ✅ 2) local dev: ابنِ base من request headers
-  const h = await headers()
-  const host = h.get('x-forwarded-host') || h.get('host')
-  const proto = h.get('x-forwarded-proto') || 'http'
-  return `${proto}://${host}`
-}
+const base = (
+  process.env.NEXT_PUBLIC_CMS_URL ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  'http://localhost:3000'
+).replace(/\/$/, '')
 
 function absUrl(u, base) {
   const s = String(u || '').trim()
@@ -23,19 +17,9 @@ function absUrl(u, base) {
   return base + '/' + s
 }
 
-async function fetchJSON(path, next) {
-  const base = await getBaseUrl()
-  const url = path.startsWith('http') ? path : `${base}${path.startsWith('/') ? '' : '/'}${path}`
-  const res = await fetch(url, { next })
-  if (!res.ok) throw new Error(`CMS ${res.status} ${path}`)
-  return res.json()
-}
-
 export async function getIslandScene() {
-  const base = await getBaseUrl()
-
   try {
-    const g = await fetchJSON('/api/globals/islandScene?depth=2', {
+    const g = await fetchJSONServer('/api/globals/islandScene?depth=2', {
       revalidate: 30,
       tags: ['island'],
     })
@@ -47,14 +31,12 @@ export async function getIslandScene() {
       maxZoomMult: Number(g?.maxZoomMult || 2.5),
     }
   } catch {
-    return { backgroundSrc: absUrl('', base), maxZoomMult: 2.5 }
+    return { backgroundSrc: '', maxZoomMult: 2.5 }
   }
 }
 
 export async function getIslandHotspots() {
-  const base = await getBaseUrl()
-
-  const data = await fetchJSON('/api/scene-hotspots?limit=200&depth=3&sort=order', {
+  const data = await fetchJSONServer('/api/scene-hotspots?limit=200&depth=3&sort=order', {
     revalidate: 30,
     tags: ['island'],
   })
@@ -93,6 +75,7 @@ export async function getIslandHotspots() {
     return {
       id: h.id,
       name: h.name,
+      trigger: h.trigger || 'click',
       x: Number(h.x || 0),
       y: Number(h.y || 0),
 
@@ -112,10 +95,10 @@ export async function getIslandHotspots() {
     }
   })
 }
+
 export async function getIslandBootDock() {
-  const base = await getBaseUrl()
   try {
-    const g = await fetchJSON('/api/globals/islandBootDock?depth=0', {
+    const g = await fetchJSONServer('/api/globals/islandBootDock?depth=0', {
       revalidate: 30,
       tags: ['island'],
     })

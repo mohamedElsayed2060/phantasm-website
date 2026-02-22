@@ -49,7 +49,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
   const isInteractingRef = useRef(false)
   const resizeTimerRef = useRef(null)
   const lastViewRef = useRef({ w: 0, h: 0 })
-
+  const openListTimerRef = useRef(null)
   // ✅ discovered persistence
   const [discoveredIds, setDiscoveredIds] = useState(() => loadDiscoveredIds())
   const [spawningId, setSpawningId] = useState(null)
@@ -232,11 +232,6 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     }
     img.onerror = () => setMap((m) => ({ ...m, ready: true }))
   }, [backgroundSrc])
-
-  // ✅ load discovered from LS once
-  // useEffect(() => {
-  //   setDiscoveredIds(loadDiscoveredIds())
-  // }, [])
 
   // ✅ save discovered to LS on change
   useEffect(() => {
@@ -494,7 +489,11 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     },
     [discoveredIds, focusSpot],
   )
-
+  useEffect(() => {
+    return () => {
+      if (openListTimerRef.current) window.clearTimeout(openListTimerRef.current)
+    }
+  }, [])
   return (
     <div
       ref={viewportRef}
@@ -602,12 +601,27 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
                   discoveredIds={discoveredIds}
                   spawningId={spawningId}
                   onBuiltBuildingClick={(spot) => {
-                    focusSpot(spot, { targetScaleMult: 1.12, duration: 450 })
-                    setOpenProjectsFor(String(spot.id))
+                    const sid = String(spot.id)
 
+                    // ✅ اقفل أي list قديمة فورًا عشان ما تعملش jump أثناء الحركة
+                    setOpenProjectsFor(null)
+
+                    // ✅ اقفل panels المرتبطة بالمشروع
                     setActiveProject(null)
                     setDetailsOpen(false)
                     setDialogOpen(false)
+
+                    // ✅ شيل أي timer قديم (لو المستخدم ضغط بسرعة على مباني مختلفة)
+                    if (openListTimerRef.current) window.clearTimeout(openListTimerRef.current)
+
+                    // ✅ نفّذ الحركة/الزوم بالمدة الفعلية الموجودة عندك
+                    const duration = 450
+                    focusSpot(spot, { targetScaleMult: 1.12, duration })
+
+                    // ✅ افتح الليست بعد انتهاء الحركة + buffer بسيط عشان transformState يثبت
+                    openListTimerRef.current = window.setTimeout(() => {
+                      setOpenProjectsFor(sid)
+                    }, duration + 80)
                   }}
                 />
               </div>

@@ -158,7 +158,7 @@ function DetailsContent({ project, onGo }) {
 
   // ✅ heights (عدّلهم براحتك)
   const TEXT_MIN_H = 110
-  const TEXT_MAX_H = 170
+  const TEXT_MAX_H = 140
   const TRACK_H = TEXT_MAX_H
 
   useLayoutEffect(() => {
@@ -194,7 +194,7 @@ function DetailsContent({ project, onGo }) {
     <div className="flex flex-col-reverse md:flex-row gap-0 md:items-stretch">
       {/* LEFT: text */}
       <div className="flex-1 min-w-0 p-4 md:p-5 md:basis-[58%] md:flex-none">
-        <div className="text-white font-bold tracking-[0.14em] text-[12px] uppercase mb-3">
+        <div className="text-white  tracking-[0.14em] text-[13px] sm:text-[15px] uppercase mb-3">
           {title}
         </div>
 
@@ -204,6 +204,7 @@ function DetailsContent({ project, onGo }) {
         <div className="flex items-start gap-[6px]">
           <div
             ref={scrollRef}
+            data-overlay-scroll="true"
             className="min-w-0 flex-1"
             style={{
               minHeight: TEXT_MIN_H,
@@ -212,6 +213,9 @@ function DetailsContent({ project, onGo }) {
               overflowX: 'hidden',
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
+
+              touchAction: 'pan-y',
+              WebkitOverflowScrolling: 'touch',
             }}
           >
             <style>{`.pd-text::-webkit-scrollbar{display:none}`}</style>

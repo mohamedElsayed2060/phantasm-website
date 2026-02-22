@@ -86,16 +86,18 @@ export default function AvatarGate({ config, allowOpen = true }) {
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
           <div
             className="absolute inset-0 z-[1] overflow-y-auto"
-            style={{ WebkitOverflowScrolling: 'touch' }}
+            data-overlay-scroll="true"
+            style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
           >
             <div className="min-h-full flex items-center justify-center py-8 px-4">
+              {' '}
               <div className="flex flex-col items-center gap-3 w-[min(1200px,100%)]">
                 {/* ── Title ── */}
                 <motion.div variants={titleV} initial="hidden" animate="show" className="w-full">
                   <PixelFrameOverlay
                     frameSrc="/frames/title-fram.png"
-                    slice={16}
-                    bw={15}
+                    slice={9}
+                    bw={9}
                     pad={0}
                     className="w-full text-center"
                   >
@@ -139,8 +141,8 @@ export default function AvatarGate({ config, allowOpen = true }) {
                       >
                         <PixelFrameOverlay
                           frameSrc="/frames/CardFrame.png"
-                          slice={13}
-                          bw={15}
+                          slice={9}
+                          bw={9}
                           pad={5}
                           className="flex items-start md:inline-block "
                         >
@@ -148,10 +150,10 @@ export default function AvatarGate({ config, allowOpen = true }) {
 
                           <PixelFrameOverlay
                             frameSrc="/frames/imgFrame.png"
-                            slice={15}
-                            bw={16}
+                            slice={9}
+                            bw={9}
                             pad={5}
-                            className="my-[7px] sm:mt-[6px] mx-[4px] md:w-auto w-[500px]"
+                            className="my-[3px] sm:mt-[4px] mx-[4px] md:w-auto w-[500px]"
                           >
                             <div
                               className="h-[150px] sm:h-[190px] flex items-center justify-center
@@ -173,8 +175,8 @@ export default function AvatarGate({ config, allowOpen = true }) {
                             {/* badge */}
                             <PixelFrameOverlay
                               frameSrc="/frames/titleFrame.png"
-                              slice={16}
-                              bw={15}
+                              slice={9}
+                              bw={9}
                               pad={0}
                             >
                               <div className="bg-[#b01010] mb-1">
@@ -186,7 +188,7 @@ export default function AvatarGate({ config, allowOpen = true }) {
                           </PixelFrameOverlay>
 
                           {/* description */}
-                          <div className="px-4 py-6 md:text-[15px] text-[13px] leading-relaxed text-white/85 whitespace-pre-line">
+                          <div className="px-4 py-5 md:text-[15px] text-[13px] leading-relaxed text-white/85 whitespace-pre-line">
                             {desc}
                           </div>
                         </PixelFrameOverlay>

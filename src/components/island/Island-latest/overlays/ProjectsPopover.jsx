@@ -95,6 +95,7 @@ export default function ProjectsPopover({
         {/* ── List ───────────────────────────────────────────────────────── */}
         <div
           ref={scrollRef}
+          data-overlay-scroll="true"
           className="py-3"
           style={{
             width: 220,
@@ -104,6 +105,8 @@ export default function ProjectsPopover({
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
             backgroundColor: '#2A1616',
+            touchAction: 'pan-y',
+            WebkitOverflowScrolling: 'touch',
           }}
         >
           <style>{`.psp-list::-webkit-scrollbar{display:none}`}</style>

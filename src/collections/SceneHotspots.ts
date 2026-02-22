@@ -11,6 +11,19 @@ export const SceneHotspots: CollectionConfig = {
   },
   fields: [
     {
+      name: 'trigger',
+      label: 'Trigger',
+      type: 'select',
+      defaultValue: 'click',
+      options: [
+        { label: 'Click / Tap', value: 'click' },
+        { label: 'Hover (desktop only)', value: 'hover' },
+      ],
+      admin: {
+        description: 'Hover works on desktop only. Mobile will still use tap.',
+      },
+    },
+    {
       name: 'name',
       type: 'text',
       required: true,

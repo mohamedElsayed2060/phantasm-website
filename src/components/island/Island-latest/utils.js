@@ -58,3 +58,17 @@ export function choosePlacementNoBottom({
   // fallback: لو ولا واحدة نفعت، برضو TOP (هنعمل clamp)
   return 'top'
 }
+export function clampPopoverToViewport({ left, top, popoverW, popoverH, vw, vh, margin = 8 }) {
+  let x = left
+  let y = top
+
+  // ✅ clamp X
+  if (x < margin) x = margin
+  if (x + popoverW > vw - margin) x = Math.max(margin, vw - margin - popoverW)
+
+  // ✅ clamp Y
+  if (y < margin) y = margin
+  if (y + popoverH > vh - margin) y = Math.max(margin, vh - margin - popoverH)
+
+  return { left: x, top: y }
+}

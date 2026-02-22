@@ -1,15 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 
-// ✅ عدّل المسار ده حسب اللي عندك في lib/cms
-import { getProjectBySlug } from '@/lib/cms'
-
+// ✅ Helper لاختيار أفضل صورة متاحة من Payload
 function pickThumb(p) {
   return (
     p?.thumbSrc ||
     p?.thumb?.url ||
+    p?.previewImage?.url ||
+    p?.previewImage?.sizes?.large?.url ||
+    p?.previewImage?.sizes?.medium?.url ||
+    p?.previewImage?.sizes?.small?.url ||
     p?.thumb?.sizes?.medium?.url ||
     p?.thumb?.sizes?.small?.url ||
     p?.thumb?.thumbnailURL ||
@@ -17,41 +19,13 @@ function pickThumb(p) {
   )
 }
 
-export default function ProjectDetailsClient({ slug }) {
+export default function ProjectDetailsClient({ project }) {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [project, setProject] = useState(null)
-  const [err, setErr] = useState(null)
 
-  useEffect(() => {
-    let alive = true
-    setLoading(true)
-    setErr(null)
+  // ✅ خلي أي mapping موجود عندك هنا (لو احتجته لاحقًا)
+  const data = useMemo(() => project || null, [project])
 
-    getProjectBySlug(slug)
-      .then((res) => {
-        if (!alive) return
-        setProject(res || null)
-      })
-      .catch((e) => {
-        if (!alive) return
-        setErr(e)
-      })
-      .finally(() => {
-        if (!alive) return
-        setLoading(false)
-      })
-
-    return () => {
-      alive = false
-    }
-  }, [slug])
-
-  if (loading) {
-    return <div className="min-h-screen bg-black text-white grid place-items-center">Loading…</div>
-  }
-
-  if (err || !project) {
+  if (!data) {
     return (
       <div className="min-h-screen bg-black text-white p-6">
         <button
@@ -65,9 +39,12 @@ export default function ProjectDetailsClient({ slug }) {
     )
   }
 
-  const title = project?.title || 'Project'
-  const short = project?.shortDescription || project?.description || ''
-  const img = pickThumb(project)
+  const title = data?.title || 'Project'
+  const short = data?.shortDescription || data?.description || ''
+  const img = pickThumb(data)
+
+  // Payload previewImage alt ممكن يكون في previewImage.alt أو .altText حسب إعداداتكم
+  const imgAlt = data?.previewImage?.alt || data?.previewImage?.altText || data?.thumb?.alt || title
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -85,11 +62,12 @@ export default function ProjectDetailsClient({ slug }) {
             <div className="text-[12px] uppercase tracking-[0.25em] text-white/60">
               Project details
             </div>
+
             <h1 className="mt-2 text-2xl font-semibold">{title}</h1>
 
-            {project?.tag ? (
+            {data?.tag ? (
               <div className="mt-2 inline-flex text-[12px] px-2 py-1 rounded bg-white/10 border border-white/10">
-                {project.tag}
+                {data.tag}
               </div>
             ) : null}
 
@@ -99,9 +77,9 @@ export default function ProjectDetailsClient({ slug }) {
 
             {/* placeholders for later fields */}
             <div className="mt-6 grid gap-2 text-[12px] text-white/60">
-              {project?.client ? <div>Client: {project.client}</div> : null}
-              {project?.type ? <div>Type: {project.type}</div> : null}
-              {project?.coverage ? <div>Coverage: {project.coverage}</div> : null}
+              {data?.client ? <div>Client: {data.client}</div> : null}
+              {data?.type ? <div>Type: {data.type}</div> : null}
+              {data?.coverage ? <div>Coverage: {data.coverage}</div> : null}
             </div>
           </div>
 
@@ -109,11 +87,7 @@ export default function ProjectDetailsClient({ slug }) {
           <div className="rounded-xl overflow-hidden border border-white/10 bg-white/95">
             {img ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={img}
-                alt={project?.thumb?.alt || title}
-                className="w-full h-full object-cover"
-              />
+              <img src={img} alt={imgAlt} className="w-full h-full object-cover" />
             ) : (
               <div className="h-[380px] grid place-items-center text-black/60">No image</div>
             )}
