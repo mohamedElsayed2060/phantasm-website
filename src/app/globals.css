@@ -247,11 +247,11 @@ html {
   opacity: 0;
 }
 
-/* body * {
+body * {
   scroll-behavior: smooth !important;
   overscroll-behavior: none;
   font-family: 'silkscreen', serif;
-} */
+}
 
 html[data-theme='dark'],
 html[data-theme='light'] {
