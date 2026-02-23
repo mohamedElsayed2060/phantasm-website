@@ -311,6 +311,10 @@ export interface SceneHotspot {
   hotspotIdle?: (string | null) | Media;
   buildingSpawn?: (string | null) | Media;
   buildingLoop?: (string | null) | Media;
+  /**
+   * How long the building spawn animation lasts (milliseconds).
+   */
+  spawnDurationMs?: number | null;
   projects?: (string | Project)[] | null;
   order?: number | null;
   updatedAt: string;
@@ -582,6 +586,7 @@ export interface SceneHotspotsSelect<T extends boolean = true> {
   hotspotIdle?: T;
   buildingSpawn?: T;
   buildingLoop?: T;
+  spawnDurationMs?: T;
   projects?: T;
   order?: T;
   updatedAt?: T;

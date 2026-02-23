@@ -7,7 +7,7 @@ import { imgUrl } from '@/lib/cms'
 import PixelFrameOverlay from '../ui/PixelFrameOverlay'
 import BackSvgIcon from './backSvgIcon'
 import PixelScrollTrack from '@/components/island/Island-latest/overlays/components/PixelScrollTrack'
-
+import useSplashRouter from './useSplashRouter'
 function sortByOrder(items = []) {
   return [...items].sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0))
 }
@@ -18,7 +18,7 @@ function isHomePath(pathname = '') {
 
 export default function HomeDockOverlay({ config, allowOpen = true }) {
   const pathname = usePathname()
-  const router = useRouter()
+  const splashRouter = useSplashRouter(350)
 
   // ✅ احسب شروط الرندر بدري (من غير ما نعمل return بدري)
   const enabled = config?.enabled !== false
@@ -90,7 +90,7 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
     }
     if (type === 'route' && it?.routePath) {
       close()
-      router.push(it.routePath)
+      splashRouter.push(it?.routePath)
       return
     }
     if (type === 'external' && it?.externalUrl) {
@@ -115,12 +115,13 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                      flex items-center justify-center hover:bg-[#2A1616] transition"
           aria-label="Open dock"
         >
+          <img className="w-full h-full" src="/open-mobile-icon.png" alt="open-mobile" />
           {/* hamburger */}
-          <span className="block w-4">
+          {/* <span className="block w-4">
             <span className="block h-[2px] bg-white/90 mb-1" />
             <span className="block h-[2px] bg-white/90 mb-1" />
             <span className="block h-[2px] bg-white/90" />
-          </span>
+          </span> */}
         </button>
       )}
 

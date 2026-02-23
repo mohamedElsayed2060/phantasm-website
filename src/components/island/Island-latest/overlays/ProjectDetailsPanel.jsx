@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import PixelFrameOverlay from '@/components/ui/PixelFrameOverlay'
 import PixelScrollTrack from '@/components/island/Island-latest/overlays/components/PixelScrollTrack'
 import PixelDivider from '@/components/island/Island-latest/overlays/components/PixelDivider'
+import useSplashRouter from '@/components/overlays/useSplashRouter'
 
 export default function ProjectDetailsPanel({
   open,
@@ -14,7 +15,7 @@ export default function ProjectDetailsPanel({
   onClose,
   width,
 }) {
-  const router = useRouter()
+  const splashRouter = useSplashRouter(350)
   if (!open || !project) return null
 
   const isMobileSheet = placement === 'top' // عندكم الموبايل بيرسل top
@@ -32,7 +33,8 @@ export default function ProjectDetailsPanel({
   const go = () => {
     const slug = project?.slug || project?.id
     if (!slug) return
-    router.push(`/project-details/${slug}`)
+    window.dispatchEvent(new CustomEvent('phantasm:splashStart', { detail: { minMs: 350 } }))
+    splashRouter.push(`/project-details/${slug}`)
   }
 
   // Animations

@@ -4,7 +4,6 @@ import IslandLab from '@/components/island/Island-latest/IslandLab'
 import { getIslandScene, getIslandHotspots, getIslandBootDock } from '@/lib/islandCms'
 export const dynamic = 'force-dynamic'
 export const revalidate = 30
-
 export default async function Page() {
   const [hotspots, scene, bootDock] = await Promise.all([
     getIslandHotspots(),

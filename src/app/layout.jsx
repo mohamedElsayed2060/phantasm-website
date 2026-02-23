@@ -1,6 +1,9 @@
-// src/app/layout.jsx
 import './globals.css'
 import { Inter } from 'next/font/google'
+
+import config from '@payload-config'
+import { handleServerFunctions, RootLayout as PayloadRootLayout } from '@payloadcms/next/layouts'
+import { importMap } from './(payload)/admin/importMap.js'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -9,10 +12,15 @@ export const metadata = {
   description: 'Phantasm website',
 }
 
+const serverFunction = async (args) => {
+  'use server'
+  return handleServerFunctions({ ...args, config, importMap })
+}
+
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" data-theme="light" suppressHydrationWarning>
-      <body className={inter.className}>{children}</body>
-    </html>
+    <PayloadRootLayout config={config} importMap={importMap} serverFunction={serverFunction}>
+      <div className={inter.className}>{children}</div>
+    </PayloadRootLayout>
   )
 }

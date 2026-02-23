@@ -6,7 +6,7 @@ import ProjectDetailsClient from './ProjectDetailsClient'
 export const revalidate = 30
 
 export default async function ProjectDetailsPage({ params }) {
-  const slug = params?.slug
+  const { slug } = await params
 
   const project = await getProjectBySlugServer(slug)
   if (!project) return notFound()

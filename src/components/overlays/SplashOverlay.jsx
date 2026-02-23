@@ -1,84 +1,82 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 
-export default function SplashOverlay({ open = true, config, logoUrl, companyName, onDone }) {
-  const minMs = Number(config?.minMs || 1400)
-
+export default function SplashOverlay({
+  open = false,
+  minMs = 420,
+  logoUrl = '/logo.gif', // عدّلها لو عندك مسار مختلف
+  companyName = 'PHANTASM',
+  onMinDone,
+}) {
+  const [minDone, setMinDone] = useState(false)
   const startRef = useRef(0)
-  const readyRef = useRef(false)
-  const doneRef = useRef(false)
 
   useEffect(() => {
-    // ✅ لو مش مفتوح: صفّر كل حاجة وسيب
     if (!open) {
+      setMinDone(false)
       startRef.current = 0
-      readyRef.current = false
-      doneRef.current = false
       return
     }
 
     startRef.current = Date.now()
-    readyRef.current = false
-    doneRef.current = false
+    setMinDone(false)
 
-    const tryFinish = () => {
-      if (doneRef.current) return
-      if (!readyRef.current) return
+    const t = setTimeout(
+      () => {
+        setMinDone(true)
+        onMinDone?.()
+      },
+      Math.max(0, Number(minMs) || 0),
+    )
 
-      const elapsed = Date.now() - startRef.current
-      const remain = Math.max(0, minMs - elapsed)
+    return () => clearTimeout(t)
+  }, [open, minMs, onMinDone])
 
-      window.setTimeout(() => {
-        if (doneRef.current) return
-        doneRef.current = true
-        onDone?.()
-      }, remain)
-    }
-
-    const onBootReady = () => {
-      readyRef.current = true
-      tryFinish()
-    }
-
-    window.addEventListener('phantasm:bootReady', onBootReady)
-
-    // ✅ safety: لو الحدث حصل قبل تركيب الليسنر
-    try {
-      if (sessionStorage.getItem('phantasm:bootReady') === '1') {
-        readyRef.current = true
-        tryFinish()
-      }
-    } catch {}
-
-    return () => {
-      window.removeEventListener('phantasm:bootReady', onBootReady)
-    }
-  }, [open, minMs, onDone])
+  const show = !!open
 
   return (
     <AnimatePresence>
-      {open ? (
+      {show ? (
         <motion.div
-          className="fixed inset-0 z-[9999] bg-[#050505] flex items-center justify-center"
-          initial={{ opacity: 1 }}
+          key="splash"
+          initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.35 }}
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black"
         >
-          {logoUrl ? (
-            <img
-              src={logoUrl || '/logo.gif'}
-              alt={companyName || 'Logo'}
-              style={{ width: 180, height: 'auto' }}
+          <div className="flex flex-col items-center gap-4">
+            {/* Logo */}
+            <motion.img
+              src={logoUrl}
+              alt={companyName}
               draggable={false}
+              initial={{ scale: 0.98, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.22 }}
+              className="w-[140px] h-auto select-none"
+              style={{ imageRendering: 'pixelated' }}
             />
-          ) : (
-            <div className="text-white/90 text-xl tracking-[0.25em]">
-              {String(companyName || 'PHANTASM').toUpperCase()}
+
+            {/* Text */}
+            <div className="text-white/80 tracking-[0.24em] text-xs">{companyName}</div>
+
+            {/* tiny loader */}
+            <div className="mt-2 h-[2px] w-[160px] overflow-hidden bg-white/10 rounded">
+              <motion.div
+                className="h-full w-1/3 bg-white/60"
+                initial={{ x: '-120%' }}
+                animate={{ x: '320%' }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 0.9,
+                  ease: 'linear',
+                }}
+              />
             </div>
-          )}
+          </div>
         </motion.div>
       ) : null}
     </AnimatePresence>

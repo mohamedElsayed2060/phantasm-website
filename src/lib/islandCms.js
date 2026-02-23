@@ -76,6 +76,8 @@ export async function getIslandHotspots() {
       id: h.id,
       name: h.name,
       trigger: h.trigger || 'click',
+      spawnDurationMs: Number(h.spawnDurationMs ?? 1700),
+
       x: Number(h.x || 0),
       y: Number(h.y || 0),
 

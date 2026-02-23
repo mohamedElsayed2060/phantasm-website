@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import SplashLink from '@/components/overlays/SplashLink'
 
 // ✅ Helper لاختيار أفضل صورة متاحة من Payload
 function pickThumb(p) {
@@ -20,20 +20,19 @@ function pickThumb(p) {
 }
 
 export default function ProjectDetailsClient({ project }) {
-  const router = useRouter()
-
   // ✅ خلي أي mapping موجود عندك هنا (لو احتجته لاحقًا)
   const data = useMemo(() => project || null, [project])
 
   if (!data) {
     return (
       <div className="min-h-screen bg-black text-white p-6">
-        <button
-          className="mb-6 px-4 py-2 rounded bg-white/10 hover:bg-white/15"
-          onClick={() => router.back()}
+        <SplashLink
+          href={'/'}
+          minMs={350}
+          className="inline-block mb-6 px-4 py-2 rounded bg-white/10 hover:bg-white/15"
         >
           ← Back
-        </button>
+        </SplashLink>
         <div className="text-white/80">Project not found.</div>
       </div>
     )
@@ -49,12 +48,13 @@ export default function ProjectDetailsClient({ project }) {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <button
-          className="mb-6 px-4 py-2 rounded bg-white/10 hover:bg-white/15"
-          onClick={() => router.back()}
+        <SplashLink
+          href={'/'}
+          minMs={350}
+          className="inline-block mb-6 px-4 py-2 rounded bg-white/10 hover:bg-white/15"
         >
           ← Back
-        </button>
+        </SplashLink>
 
         <div className="grid gap-6 md:grid-cols-[1fr_420px]">
           {/* Text */}

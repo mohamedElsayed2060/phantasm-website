@@ -648,6 +648,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
                   setOpenProjectsFor(null)
                   setDetailsOpen(false)
                   setDialogOpen(false)
+                  reset({ duration: 550 })
                 }}
                 onProjectPick={(p) => {
                   setActiveProject(p)

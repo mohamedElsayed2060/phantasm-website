@@ -23,6 +23,7 @@ export const SceneHotspots: CollectionConfig = {
         description: 'Hover works on desktop only. Mobile will still use tap.',
       },
     },
+
     {
       name: 'name',
       type: 'text',
@@ -45,8 +46,18 @@ export const SceneHotspots: CollectionConfig = {
     // ✅ hotspot + building gifs
     { name: 'hotspotIdle', type: 'upload', relationTo: 'media' }, // gif glow/idle
     { name: 'buildingSpawn', type: 'upload', relationTo: 'media' }, // gif خروج المبنى
-    { name: 'buildingLoop', type: 'upload', relationTo: 'media' }, // gif ثابت
 
+    { name: 'buildingLoop', type: 'upload', relationTo: 'media' }, // gif ثابت
+    {
+      name: 'spawnDurationMs',
+      label: 'Spawn Duration (ms)',
+      type: 'number',
+      defaultValue: 1700,
+      min: 0,
+      admin: {
+        description: 'How long the building spawn animation lasts (milliseconds).',
+      },
+    },
     // ✅ link projects
     {
       name: 'projects',
