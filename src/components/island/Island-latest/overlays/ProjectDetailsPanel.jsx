@@ -257,7 +257,7 @@ function DetailsContent({ project, onGo }) {
       </div>
 
       {/* RIGHT: images */}
-      <div className="w-full p-[2px] pr-[5px] md:basis-[42%] md:flex-none flex md:rounded-r-2xl bg-white items-center justify-center">
+      <div className="w-full p-[2px] pr-[5px] md:basis-[42%] md:flex-none flex rounded-t-2xl md:rounded-r-2xl bg-white items-center justify-center">
         {images.length ? (
           <div className="w-full h-full flex items-center justify-center">
             {/* ✅ صورة واحدة تملا المساحة */}

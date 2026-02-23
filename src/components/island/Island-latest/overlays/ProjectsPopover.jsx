@@ -98,7 +98,7 @@ export default function ProjectsPopover({
           data-overlay-scroll="true"
           className="py-3"
           style={{
-            width: 220,
+            width: 230,
             height: LIST_H,
             overflowY: 'scroll',
             overflowX: 'hidden',
