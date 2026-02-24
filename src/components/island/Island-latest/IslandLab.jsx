@@ -463,6 +463,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
 
       if (discoveredIds.has(sid)) {
         setOpenProjectsFor(sid)
+        setDialogOpen(true) // ✅ NEW
         return
       }
 
@@ -481,10 +482,14 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
 
       if (spawnTimerRef.current) window.clearTimeout(spawnTimerRef.current)
       const ms = Number(spot.spawnDurationMs || 1700)
-
       spawnTimerRef.current = window.setTimeout(() => {
         setSpawningId((curr) => (String(curr) === sid ? null : curr))
+
+        // ✅ افتح الليست
         setOpenProjectsFor(sid)
+
+        // ✅ NEW: افتح Building Dialog مع الليست (أول مرة بعد الهوتسبوت)
+        setDialogOpen(true)
       }, ms)
     },
     [discoveredIds, focusSpot],
@@ -621,6 +626,9 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
                     // ✅ افتح الليست بعد انتهاء الحركة + buffer بسيط عشان transformState يثبت
                     openListTimerRef.current = window.setTimeout(() => {
                       setOpenProjectsFor(sid)
+
+                      // ✅ NEW: افتح Building Dialog مع فتح الليست (مرة واحدة لكل مبنى)
+                      setDialogOpen(true)
                     }, duration + 80)
                   }}
                 />
@@ -653,7 +661,9 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
                 onProjectPick={(p) => {
                   setActiveProject(p)
                   setDetailsOpen(true)
-                  if (view.w >= 768) setDialogOpen(true)
+
+                  // ✅ NEW: اقفل building dialog لو لسه مفتوح
+                  setDialogOpen(false)
                 }}
                 onOpenDetails={() => setDetailsOpen(true)}
                 onCloseDetails={() => setDetailsOpen(false)}

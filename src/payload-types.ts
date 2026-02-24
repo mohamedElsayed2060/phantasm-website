@@ -100,25 +100,15 @@ export interface Config {
   };
   fallbackLocale: null;
   globals: {
-    header: Header;
-    footer: Footer;
     'player-selection': PlayerSelection;
     islandBootDock: IslandBootDock;
-    'site-settings': SiteSetting;
     islandScene: IslandScene;
-    scene: Scene;
-    'dialog-settings': DialogSetting;
     'home-dock': HomeDock;
   };
   globalsSelect: {
-    header: HeaderSelect<false> | HeaderSelect<true>;
-    footer: FooterSelect<false> | FooterSelect<true>;
     'player-selection': PlayerSelectionSelect<false> | PlayerSelectionSelect<true>;
     islandBootDock: IslandBootDockSelect<false> | IslandBootDockSelect<true>;
-    'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     islandScene: IslandSceneSelect<false> | IslandSceneSelect<true>;
-    scene: SceneSelect<false> | SceneSelect<true>;
-    'dialog-settings': DialogSettingsSelect<false> | DialogSettingsSelect<true>;
     'home-dock': HomeDockSelect<false> | HomeDockSelect<true>;
   };
   locale: null;
@@ -316,6 +306,19 @@ export interface SceneHotspot {
    */
   spawnDurationMs?: number | null;
   projects?: (string | Project)[] | null;
+  introEnabled?: boolean | null;
+  introPages?:
+    | {
+        title: string;
+        paragraphs?:
+          | {
+              text: string;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
   order?: number | null;
   updatedAt: string;
   createdAt: string;
@@ -337,12 +340,6 @@ export interface Project {
   ctaLabel?: string | null;
   ctaType?: ('route' | 'external') | null;
   ctaUrl?: string | null;
-  dialogPages?:
-    | {
-        text: string;
-        id?: string | null;
-      }[]
-    | null;
   order?: number | null;
   updatedAt: string;
   createdAt: string;
@@ -588,6 +585,19 @@ export interface SceneHotspotsSelect<T extends boolean = true> {
   buildingLoop?: T;
   spawnDurationMs?: T;
   projects?: T;
+  introEnabled?: T;
+  introPages?:
+    | T
+    | {
+        title?: T;
+        paragraphs?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+            };
+        id?: T;
+      };
   order?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -605,12 +615,6 @@ export interface ProjectsSelect<T extends boolean = true> {
   ctaLabel?: T;
   ctaType?: T;
   ctaUrl?: T;
-  dialogPages?:
-    | T
-    | {
-        text?: T;
-        id?: T;
-      };
   order?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -684,54 +688,6 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "header".
- */
-export interface Header {
-  id: string;
-  navItems?:
-    | {
-        link: {
-          type?: ('reference' | 'custom') | null;
-          newTab?: boolean | null;
-          reference?: {
-            relationTo: 'projects';
-            value: string | Project;
-          } | null;
-          url?: string | null;
-          label: string;
-        };
-        id?: string | null;
-      }[]
-    | null;
-  updatedAt?: string | null;
-  createdAt?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "footer".
- */
-export interface Footer {
-  id: string;
-  navItems?:
-    | {
-        link: {
-          type?: ('reference' | 'custom') | null;
-          newTab?: boolean | null;
-          reference?: {
-            relationTo: 'projects';
-            value: string | Project;
-          } | null;
-          url?: string | null;
-          label: string;
-        };
-        id?: string | null;
-      }[]
-    | null;
-  updatedAt?: string | null;
-  createdAt?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "player-selection".
  */
 export interface PlayerSelection {
@@ -768,59 +724,12 @@ export interface IslandBootDock {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "site-settings".
- */
-export interface SiteSetting {
-  id: string;
-  companyName: string;
-  logo?: (string | null) | Media;
-  splash?: {
-    enabled?: boolean | null;
-    minDurationMs?: number | null;
-    backgroundBlur?: string | null;
-    showEveryVisit?: boolean | null;
-  };
-  updatedAt?: string | null;
-  createdAt?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "islandScene".
  */
 export interface IslandScene {
   id: string;
   background?: (string | null) | Media;
   maxZoomMult?: number | null;
-  updatedAt?: string | null;
-  createdAt?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "scene".
- */
-export interface Scene {
-  id: string;
-  sceneKey: string;
-  canvasWidthDesktop: number;
-  canvasWidthTablet: number;
-  canvasWidthMobile: number;
-  background?: (string | null) | Media;
-  enableInertia?: boolean | null;
-  idleGlowEnabled?: boolean | null;
-  updatedAt?: string | null;
-  createdAt?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "dialog-settings".
- */
-export interface DialogSetting {
-  id: string;
-  typingSpeedMs: number;
-  cursor: string;
-  hudPosition: 'bottom' | 'top';
-  enableSound?: boolean | null;
-  defaultSpeakerName?: string | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -895,52 +804,6 @@ export interface HomeDock {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "header_select".
- */
-export interface HeaderSelect<T extends boolean = true> {
-  navItems?:
-    | T
-    | {
-        link?:
-          | T
-          | {
-              type?: T;
-              newTab?: T;
-              reference?: T;
-              url?: T;
-              label?: T;
-            };
-        id?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "footer_select".
- */
-export interface FooterSelect<T extends boolean = true> {
-  navItems?:
-    | T
-    | {
-        link?:
-          | T
-          | {
-              type?: T;
-              newTab?: T;
-              reference?: T;
-              url?: T;
-              label?: T;
-            };
-        id?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "player-selection_select".
  */
 export interface PlayerSelectionSelect<T extends boolean = true> {
@@ -979,60 +842,11 @@ export interface IslandBootDockSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "site-settings_select".
- */
-export interface SiteSettingsSelect<T extends boolean = true> {
-  companyName?: T;
-  logo?: T;
-  splash?:
-    | T
-    | {
-        enabled?: T;
-        minDurationMs?: T;
-        backgroundBlur?: T;
-        showEveryVisit?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "islandScene_select".
  */
 export interface IslandSceneSelect<T extends boolean = true> {
   background?: T;
   maxZoomMult?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "scene_select".
- */
-export interface SceneSelect<T extends boolean = true> {
-  sceneKey?: T;
-  canvasWidthDesktop?: T;
-  canvasWidthTablet?: T;
-  canvasWidthMobile?: T;
-  background?: T;
-  enableInertia?: T;
-  idleGlowEnabled?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "dialog-settings_select".
- */
-export interface DialogSettingsSelect<T extends boolean = true> {
-  typingSpeedMs?: T;
-  cursor?: T;
-  hudPosition?: T;
-  enableSound?: T;
-  defaultSpeakerName?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

@@ -7,21 +7,16 @@ import { fileURLToPath } from 'url'
 import { Media } from './collections/Media'
 
 import { Users } from './collections/Users'
-import { Footer } from './Footer/config'
-import { Header } from './Header/config'
+
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL } from './utilities/getURL'
 import { PlayerSelection } from './globals/playerSelection'
-import { SiteSettings } from './globals/siteSettings'
 import { SceneHotspots } from './collections/SceneHotspots'
-import { DialogSettings } from './globals/DialogSettings'
-import { Scene } from './globals/Scene'
 import { Projects } from './collections/Projects'
 import { IslandScene } from './globals/IslandScene'
 import IslandBootDock from './globals/IslandBootDock'
 import { HomeDock } from './globals/HomeDock'
 import { ContactMessages } from './collections/ContactMessages'
-// import { getDialogSettings } from './lib/cms'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -70,17 +65,7 @@ export default buildConfig({
   }),
   collections: [Media, Users, SceneHotspots, Projects, ContactMessages],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [
-    Header,
-    Footer,
-    PlayerSelection,
-    IslandBootDock,
-    SiteSettings,
-    IslandScene,
-    Scene,
-    DialogSettings,
-    HomeDock,
-  ],
+  globals: [PlayerSelection, IslandBootDock, IslandScene, HomeDock],
   plugins: [],
   secret: process.env.PAYLOAD_SECRET,
   sharp,

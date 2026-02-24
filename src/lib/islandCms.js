@@ -41,63 +41,75 @@ export async function getIslandHotspots() {
     tags: ['island'],
   })
 
-  const docs = data?.docs || []
+  const docs = Array.isArray(data?.docs) ? data.docs : []
 
   return docs.map((h) => {
-    const projectsRaw = Array.isArray(h.projects) ? h.projects : []
+    const projectsRaw = Array.isArray(h?.projects) ? h.projects : []
 
     const projects = projectsRaw
       .map((p) => {
-        const preview = p.previewImage ? imgUrl(p.previewImage) : ''
-
+        const previewRel = p?.previewImage ? imgUrl(p.previewImage) : ''
         return {
-          id: p.id,
-          slug: p.slug,
-          title: p.title,
-          shortDescription: p.shortDescription,
-          detailsText: p.detailsText,
-          previewImage: absUrl(preview, base),
-          ctaLabel: p.ctaLabel,
-          ctaType: p.ctaType,
-          ctaUrl: p.ctaUrl,
-          pages: Array.isArray(p.dialogPages)
-            ? p.dialogPages.map((x) => x?.text).filter(Boolean)
-            : [],
-          order: p.order ?? 0,
+          id: p?.id,
+          slug: p?.slug,
+          title: p?.title,
+          shortDescription: p?.shortDescription,
+          detailsText: p?.detailsText,
+          previewImage: absUrl(previewRel, base),
+          ctaLabel: p?.ctaLabel,
+          ctaType: p?.ctaType,
+          ctaUrl: p?.ctaUrl,
+          order: Number(p?.order ?? 0),
         }
       })
+      .filter((p) => p?.id)
       .sort((a, b) => (a.order || 0) - (b.order || 0))
 
-    const hotspotIdle = h.hotspotIdle ? imgUrl(h.hotspotIdle) : ''
-    const buildingSpawn = h.buildingSpawn ? imgUrl(h.buildingSpawn) : ''
-    const buildingLoop = h.buildingLoop ? imgUrl(h.buildingLoop) : ''
+    const hotspotIdleRel = h?.hotspotIdle ? imgUrl(h.hotspotIdle) : ''
+    const buildingSpawnRel = h?.buildingSpawn ? imgUrl(h.buildingSpawn) : ''
+    const buildingLoopRel = h?.buildingLoop ? imgUrl(h.buildingLoop) : ''
+
+    // ✅ Building intro pages (NO fallback)
+    const introPagesRaw = Array.isArray(h?.introPages) ? h.introPages : []
+    const introPages = introPagesRaw
+      .map((pg) => {
+        const title = String(pg?.title || '').trim()
+        const parasRaw = Array.isArray(pg?.paragraphs) ? pg.paragraphs : []
+        const paragraphs = parasRaw.map((x) => String(x?.text || '').trim()).filter(Boolean)
+
+        // لازم title + على الأقل paragraph واحدة
+        if (!title || paragraphs.length === 0) return null
+        return { title, paragraphs }
+      })
+      .filter(Boolean)
 
     return {
-      id: h.id,
-      name: h.name,
-      trigger: h.trigger || 'click',
-      spawnDurationMs: Number(h.spawnDurationMs ?? 1700),
+      id: h?.id,
+      name: h?.name,
+      trigger: h?.trigger || 'click',
+      spawnDurationMs: Number(h?.spawnDurationMs ?? 1700),
 
-      x: Number(h.x || 0),
-      y: Number(h.y || 0),
+      x: Number(h?.x || 0),
+      y: Number(h?.y || 0),
 
-      // ✅ anchors (0..1)
-      anchorX: Number(h.anchorX ?? 0.5),
-      anchorY: Number(h.anchorY ?? 0.9),
+      anchorX: Number(h?.anchorX ?? 0.5),
+      anchorY: Number(h?.anchorY ?? 0.9),
 
-      buildingW: Number(h.buildingW || 240),
-      buildingH: Number(h.buildingH || 240),
+      buildingW: Number(h?.buildingW || 240),
+      buildingH: Number(h?.buildingH || 240),
 
-      // ✅ absolute image URLs
-      hotspotIdleSrc: absUrl(hotspotIdle, base),
-      buildingSpawnSrc: absUrl(buildingSpawn, base),
-      buildingLoopSrc: absUrl(buildingLoop, base),
+      hotspotIdleSrc: absUrl(hotspotIdleRel, base),
+      buildingSpawnSrc: absUrl(buildingSpawnRel, base),
+      buildingLoopSrc: absUrl(buildingLoopRel, base),
+
+      // ✅ new dialog model
+      introEnabled: h?.introEnabled !== false,
+      introPages,
 
       projects,
     }
   })
 }
-
 export async function getIslandBootDock() {
   try {
     const g = await fetchJSONServer('/api/globals/islandBootDock?depth=0', {

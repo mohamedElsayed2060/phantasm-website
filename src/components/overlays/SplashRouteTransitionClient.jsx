@@ -5,10 +5,10 @@ import { usePathname } from 'next/navigation'
 import SplashOverlay from './SplashOverlay'
 
 export default function SplashRouteTransitionClient({
-  defaultMinMs = 650, // ✅ زوّدها براحتك
-  holdAfterReadyMs = 200, // ✅ “زيادة صغيرة” بعد ما الداتا/الروت جاهز
-  logoUrl,
-  companyName,
+  defaultMinMs = 750, // ✅ زوّدها براحتك
+  holdAfterReadyMs = 300, // ✅ “زيادة صغيرة” بعد ما الداتا/الروت جاهز
+  logoUrl = 'logo.gif',
+  companyName = 'PHANTASM',
   initialOnMount = true,
   initialMinMs = 650,
 }) {

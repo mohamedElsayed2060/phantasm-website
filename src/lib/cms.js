@@ -57,24 +57,11 @@ export async function fetchJSON(path, options = {}) {
 // ==========================
 // ✅ Globals (Phantasm)
 // ==========================
-export async function getSiteSettings() {
-  return fetchJSON('/api/globals/site-settings?depth=2', {
-    revalidate: RV,
-    tags: ['global:site-settings'],
-  }).catch(() => null)
-}
 
 export async function getPlayerSelection() {
   return fetchJSON('/api/globals/player-selection?depth=2', {
     revalidate: RV,
     tags: ['global:player-selection'],
-  }).catch(() => null)
-}
-
-export async function getDialogSettings() {
-  return fetchJSON('/api/globals/dialog-settings?depth=2', {
-    revalidate: RV,
-    tags: ['global:dialog-settings'],
   }).catch(() => null)
 }
 
@@ -102,12 +89,7 @@ export async function getHomeDock() {
 // ✅ Layout props (if needed later)
 // ==========================
 export async function getFrontendGlobals() {
-  const [siteSettings, playerSelection, dialogSettings, homeDock] = await Promise.all([
-    getSiteSettings(),
-    getPlayerSelection(),
-    getDialogSettings(),
-    getHomeDock(),
-  ])
+  const [playerSelection, homeDock] = await Promise.all([getPlayerSelection(), getHomeDock()])
 
-  return { siteSettings, playerSelection, dialogSettings, homeDock }
+  return { playerSelection, homeDock }
 }

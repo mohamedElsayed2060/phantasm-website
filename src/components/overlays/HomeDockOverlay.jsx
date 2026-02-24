@@ -116,12 +116,6 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
           aria-label="Open dock"
         >
           <img className="w-full h-full" src="/open-mobile-icon.png" alt="open-mobile" />
-          {/* hamburger */}
-          {/* <span className="block w-4">
-            <span className="block h-[2px] bg-white/90 mb-1" />
-            <span className="block h-[2px] bg-white/90 mb-1" />
-            <span className="block h-[2px] bg-white/90" />
-          </span> */}
         </button>
       )}
 

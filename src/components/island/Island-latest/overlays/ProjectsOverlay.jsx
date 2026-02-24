@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import ProjectsPopover from './ProjectsPopover'
 import BuildingPointer from './BuildingPointer'
 import ProjectDetailsPanel from './ProjectDetailsPanel'
-import ProjectDialogPanel from './ProjectDialogPanel'
+import BuildingDialogPanel from './BuildingDialogPanel'
 import { clampToViewportX } from '../utils'
 import useLockIslandGestures from '@/components/overlays/useLockIslandGestures'
 
@@ -305,12 +305,8 @@ export default function ProjectsOverlay({
 
   const handleProjectClick = (p) => {
     onCloseDetails?.()
-    onProjectPick?.(p)
-  }
-
-  const handleRequestDetails = () => {
-    onCloseDialog?.()
-    onOpenDetails?.()
+    onCloseDialog?.() // ✅ يقفل building dialog لو مفتوح
+    onProjectPick?.(p) // ✅ يفتح panel مباشرة
   }
 
   return (
@@ -349,7 +345,7 @@ export default function ProjectsOverlay({
       </div>
 
       {/* ✅ DETAILS PANEL */}
-      {detailsOpen && !dialogOpen ? (
+      {detailsOpen ? (
         mobile ? (
           <ProjectDetailsPanel
             open
@@ -378,12 +374,11 @@ export default function ProjectsOverlay({
           style={{ width: 'min(820px, calc(100vw - 24px))' }}
           onClick={(e) => e.stopPropagation()}
         >
-          <ProjectDialogPanel
+          <BuildingDialogPanel
             open
-            project={activeProject}
+            spot={overlay.spot} // ✅ المبنى نفسه
             player={player}
             onClose={onCloseDialog}
-            onRequestDetails={handleRequestDetails}
           />
           <div className="flex justify-center mt-2 opacity-80">
             <div className="h-1 w-16 rounded-full bg-white/25" />

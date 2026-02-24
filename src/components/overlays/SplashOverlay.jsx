@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 
 export default function SplashOverlay({
   open = false,
-  minMs = 420,
+  minMs = 520,
   logoUrl = '/logo.gif', // عدّلها لو عندك مسار مختلف
   companyName = 'PHANTASM',
   onMinDone,

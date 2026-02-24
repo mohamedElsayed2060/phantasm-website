@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import PixelFrameOverlay from '@/components/ui/PixelFrameOverlay'
 
-// --- Hook لعمل تأثير الكتابة (Typewriter) ---
+// --- Hook Typewriter ---
 function useTypewriter(text, { speed = 14, enabled = true } = {}) {
   const [out, setOut] = useState('')
   const [typing, setTyping] = useState(false)
@@ -16,6 +16,7 @@ function useTypewriter(text, { speed = 14, enabled = true } = {}) {
     textRef.current = String(text ?? '')
     idxRef.current = 0
     setOut('')
+
     if (!enabled) {
       setOut(textRef.current)
       setTyping(false)
@@ -45,33 +46,57 @@ function useTypewriter(text, { speed = 14, enabled = true } = {}) {
   return { out, typing }
 }
 
-export default function ProjectDialogPanel({
-  open,
-  project,
-  player,
-  onClose,
-  onRequestDetails,
-  typingSpeed = 14,
-}) {
-  const pages = useMemo(() => {
-    const p = project?.pages
-    if (Array.isArray(p) && p.length) return p.filter(Boolean)
-    if (project?.text) return [String(project.text)]
-    return []
-  }, [project])
+// ✅ يحول introPages -> slides (كل paragraph تعتبر slide لوحدها)
+function buildSlides(spot) {
+  const pagesRaw = Array.isArray(spot?.introPages) ? spot.introPages : []
 
-  const [pageIndex, setPageIndex] = useState(0)
+  const slides = []
 
+  for (const pg of pagesRaw) {
+    const title = String(pg?.title || '').trim()
+    const parasRaw = Array.isArray(pg?.paragraphs) ? pg.paragraphs : []
+
+    const paragraphs = parasRaw
+      .map((x) => {
+        if (typeof x === 'string') return x.trim()
+        if (x && typeof x === 'object') return String(x.text || '').trim()
+        return ''
+      })
+      .filter(Boolean)
+
+    if (!title || paragraphs.length === 0) continue
+
+    // ✅ كل paragraph = slide منفصلة بنفس عنوان الصفحة
+    for (const p of paragraphs) {
+      slides.push({ title, text: p })
+    }
+  }
+
+  return slides
+}
+
+export default function BuildingDialogPanel({ open, spot, player, onClose, typingSpeed = 14 }) {
+  const slides = useMemo(() => buildSlides(spot), [spot])
+
+  // ✅ لا يوجد fallback
+  const enabled = Boolean(open) && spot?.introEnabled !== false && slides.length > 0
+  if (!enabled) return null
+
+  const [index, setIndex] = useState(0)
+
+  // ✅ reset when opening or changing building
   useEffect(() => {
-    if (open) setPageIndex(0)
-  }, [open, project?.id])
+    if (enabled) setIndex(0)
+  }, [enabled, spot?.id])
 
-  const hasPrev = pageIndex > 0
-  const hasNext = pageIndex < pages.length - 1
-  const isLastPage = pageIndex === pages.length - 1
+  const hasPrev = index > 0
+  const hasNext = index < slides.length - 1
 
-  const currentText = String(pages[pageIndex] ?? '')
-  const { out, typing } = useTypewriter(currentText, { speed: typingSpeed, enabled: open })
+  const current = slides[index]
+  const { out, typing } = useTypewriter(String(current?.text ?? ''), {
+    speed: typingSpeed,
+    enabled: open,
+  })
 
   const dockV = {
     hidden: { opacity: 0, y: 16, scale: 0.98, filter: 'blur(4px)' },
@@ -84,8 +109,6 @@ export default function ProjectDialogPanel({
     },
     exit: { opacity: 0, y: 12, scale: 0.985, filter: 'blur(4px)', transition: { duration: 0.2 } },
   }
-
-  if (!open) return null
 
   return (
     <AnimatePresence>
@@ -133,7 +156,7 @@ export default function ProjectDialogPanel({
 
           {/* --- TEXT BOX --- */}
           <div className="relative flex-1 min-w-0">
-            {/* مؤشر الـ Typing */}
+            {/* مؤشر Typing */}
             <AnimatePresence>
               {typing && (
                 <motion.div
@@ -159,7 +182,12 @@ export default function ProjectDialogPanel({
               innerClassName="overflow-hidden"
             >
               <div className="relative min-h-[105px] p-3 md:p-5">
-                {/* النص */}
+                {/* ✅ Title ثابت فوق (من introPages.title) */}
+                <div className="mb-2 text-white font-bold tracking-[0.22em] text-[11px] uppercase">
+                  {current?.title || spot?.name || 'BUILDING'}
+                </div>
+
+                {/* النص (Paragraph واحدة فقط) */}
                 <div className="pb-2">
                   <div className="text-white/90 text-[10px] sm:text-[11px] leading-[1.55] tracking-[0.14em] uppercase whitespace-pre-wrap">
                     {out}
@@ -167,14 +195,15 @@ export default function ProjectDialogPanel({
                   </div>
                 </div>
 
-                {/* --- أزرار التحكم --- */}
+                {/* --- أزرار التحكم (نفس مكان وشكل القديم) --- */}
                 <div className="absolute bottom-2 right-2 flex items-center gap-3">
-                  {/* زر السابق */}
+                  {/* Prev */}
                   <button
                     type="button"
                     disabled={!hasPrev}
-                    onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+                    onClick={() => setIndex((i) => Math.max(0, i - 1))}
                     className="hover:scale-110 active:scale-95 transition-transform disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="Previous"
                   >
                     <svg width="15" height="13" viewBox="0 0 13 11" fill="none">
                       <path
@@ -184,44 +213,24 @@ export default function ProjectDialogPanel({
                     </svg>
                   </button>
 
-                  {/* زر التالي أو Details في آخر page */}
-                  {isLastPage ? (
-                    // آخر page → زرار Details
-                    <button
-                      type="button"
-                      onClick={() => onRequestDetails?.(project)}
-                      className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-white/15 hover:bg-white/25 active:scale-95 transition-all border border-white/20"
-                    >
-                      <span className="text-white text-[9px] font-bold tracking-widest uppercase">
-                        Details
-                      </span>
-                      {/* سهم صغير */}
-                      <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                        <path
-                          d="M0 0h2v2H0zm2 2h2v2H2zm2 2h2v2H4zM2 4h2v2H2zM0 6h2v2H0z"
-                          fill="white"
-                        />
-                      </svg>
-                    </button>
-                  ) : (
-                    // مش آخر page → زرار Next عادي
-                    <button
-                      type="button"
-                      disabled={!hasNext}
-                      onClick={() => setPageIndex((i) => i + 1)}
-                      className="hover:scale-110 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-transform"
-                    >
-                      <svg width="15" height="13" viewBox="0 0 12 10" fill="none">
-                        <path
-                          d="M10 7L10 8L9 8L9 9L8 9L8 10L6 10L6 9L1 9L1 1L6 1L6 -2.62268e-07L8 -1.74846e-07L8 1L9 1L9 2L10 2L10 3L11 3L11 4L12 4L12 6L11 6L11 7L10 7Z"
-                          fill="white"
-                        />
-                      </svg>
-                    </button>
-                  )}
+                  {/* Next */}
+                  <button
+                    type="button"
+                    disabled={!hasNext}
+                    onClick={() => setIndex((i) => Math.min(slides.length - 1, i + 1))}
+                    className="hover:scale-110 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-transform"
+                    aria-label="Next"
+                  >
+                    <svg width="15" height="13" viewBox="0 0 12 10" fill="none">
+                      <path
+                        d="M10 7L10 8L9 8L9 9L8 9L8 10L6 10L6 9L1 9L1 1L6 1L6 -2.62268e-07L8 -1.74846e-07L8 1L9 1L9 2L10 2L10 3L11 3L11 4L12 4L12 6L11 6L11 7L10 7Z"
+                        fill="white"
+                      />
+                    </svg>
+                  </button>
                 </div>
 
-                {/* زر الإغلاق */}
+                {/* Close */}
                 <div onClick={onClose} className="z-10 cursor-pointer absolute -top-6 -right-6">
                   <img src="/close.png" alt="close" className="w-8 h-8" />
                 </div>

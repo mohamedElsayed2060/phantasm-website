@@ -65,7 +65,41 @@ export const SceneHotspots: CollectionConfig = {
       relationTo: 'projects',
       hasMany: true,
     },
-
+    // ✅ Building Intro Dialog (NEW)
+    {
+      name: 'introEnabled',
+      label: 'Intro Dialog Enabled',
+      type: 'checkbox',
+      defaultValue: true,
+    },
+    {
+      name: 'introPages',
+      label: 'Intro Pages',
+      type: 'array',
+      minRows: 0,
+      fields: [
+        {
+          name: 'title',
+          label: 'Title',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'paragraphs',
+          label: 'Paragraphs',
+          type: 'array',
+          minRows: 1,
+          fields: [
+            {
+              name: 'text',
+              label: 'Paragraph',
+              type: 'textarea',
+              required: true,
+            },
+          ],
+        },
+      ],
+    },
     { name: 'order', type: 'number', defaultValue: 0 },
   ],
 }

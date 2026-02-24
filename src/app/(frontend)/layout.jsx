@@ -11,9 +11,8 @@ export const dynamic = 'force-dynamic'
 export default async function FrontendLayout({ children }) {
   const globals = await getFrontendGlobals()
 
-  const site = globals?.siteSettings
-  const logoUrl = site?.logo?.url || site?.logoUrl || '/logo.gif'
-  const companyName = site?.companyName || 'PHANTASM'
+  const logoUrl = '/logo.gif'
+  const companyName = 'PHANTASM'
 
   return (
     <div className="min-h-screen silkscreen-font bg-black text-white overflow-hidden relative">
@@ -40,10 +39,10 @@ export default async function FrontendLayout({ children }) {
       <SsrSplashHider minMs={650} />
       {/* ✅ Route transitions only (click/back). No initialOnMount to prevent flash. */}
       <SplashRouteTransitionClient
-        defaultMinMs={650}
+        // defaultMinMs={650}
         initialOnMount={false}
-        logoUrl={logoUrl}
-        companyName={companyName}
+        // logoUrl={logoUrl}
+        // companyName={companyName}
       />
       <FrontendOverlays globals={globals} />
       {/* ✅ Page enter/exit animation لكل الصفحات */}

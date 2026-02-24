@@ -65,20 +65,6 @@ export const Projects: CollectionConfig = {
       },
     },
 
-    // ✅ للديالوج (ProjectDialogPanel) — صفحات نص
-    {
-      name: 'dialogPages',
-      type: 'array',
-      fields: [
-        {
-          name: 'text',
-          type: 'textarea',
-          localized: true,
-          required: true,
-        },
-      ],
-    },
-
     // ✅ ترتيب المشروع داخل مبنى واحد
     {
       name: 'order',
