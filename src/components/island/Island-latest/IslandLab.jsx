@@ -458,7 +458,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
   const onHotspotClick = useCallback(
     (spot) => {
       if (!spot?.id) return
-
+      closeBootDock()
       const sid = String(spot.id)
 
       if (discoveredIds.has(sid)) {
@@ -607,6 +607,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
                   spawningId={spawningId}
                   onBuiltBuildingClick={(spot) => {
                     const sid = String(spot.id)
+                    closeBootDock()
 
                     // ✅ اقفل أي list قديمة فورًا عشان ما تعملش jump أثناء الحركة
                     setOpenProjectsFor(null)

@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import AvatarGate from './AvatarGate'
 import HomeDockOverlay from './HomeDockOverlay'
 import useLockIslandGestures from './useLockIslandGestures'
-
+import { usePathname } from 'next/navigation'
+import useLockPageZoom from './useLockPageZoom'
 /**
  * FrontendOverlays (STATIC)
  * - No Splash here anymore.
@@ -14,6 +15,8 @@ import useLockIslandGestures from './useLockIslandGestures'
 export default function FrontendOverlays({ globals }) {
   const playerSelection = globals?.playerSelection
   const homeDock = globals?.homeDock
+  const pathname = usePathname()
+  const isHome = pathname === '/'
 
   const [locks, setLocks] = useState({})
 
@@ -33,8 +36,8 @@ export default function FrontendOverlays({ globals }) {
   const isProjectsOpen = Boolean(locks?.projects)
 
   // ✅ قفل gestures لما أي overlay مفتوح/locked
-  useLockIslandGestures(anyOverlayLocked)
-
+  useLockIslandGestures(anyOverlayLocked && isHome)
+  useLockPageZoom(true)
   return (
     <>
       <AvatarGate config={playerSelection} allowOpen={true} />

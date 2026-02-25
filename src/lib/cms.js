@@ -88,8 +88,15 @@ export async function getHomeDock() {
 // ==========================
 // ✅ Layout props (if needed later)
 // ==========================
+
 export async function getFrontendGlobals() {
   const [playerSelection, homeDock] = await Promise.all([getPlayerSelection(), getHomeDock()])
 
   return { playerSelection, homeDock }
+}
+export async function getAboutUs() {
+  return fetchJSON('/api/globals/about-us?depth=2', {
+    revalidate: RV,
+    tags: ['global:about-us'],
+  }).catch(() => null)
 }

@@ -104,12 +104,14 @@ export interface Config {
     islandBootDock: IslandBootDock;
     islandScene: IslandScene;
     'home-dock': HomeDock;
+    'about-us': AboutUs;
   };
   globalsSelect: {
     'player-selection': PlayerSelectionSelect<false> | PlayerSelectionSelect<true>;
     islandBootDock: IslandBootDockSelect<false> | IslandBootDockSelect<true>;
     islandScene: IslandSceneSelect<false> | IslandSceneSelect<true>;
     'home-dock': HomeDockSelect<false> | HomeDockSelect<true>;
+    'about-us': AboutUsSelect<false> | AboutUsSelect<true>;
   };
   locale: null;
   user: User;
@@ -804,6 +806,36 @@ export interface HomeDock {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "about-us".
+ */
+export interface AboutUs {
+  id: string;
+  /**
+   * Where the back button navigates (e.g. /).
+   */
+  backHref: string;
+  backButtonImage: string | Media;
+  companyLabel: string;
+  missionText: string;
+  teamTitle: string;
+  /**
+   * Must match one of members[].key (e.g. mustafa).
+   */
+  defaultMemberKey: string;
+  members: {
+    key: string;
+    name: string;
+    avatarStatic: string | Media;
+    avatarAnimated: string | Media;
+    realPhoto?: (string | null) | Media;
+    bioText: string;
+    id?: string | null;
+  }[];
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "player-selection_select".
  */
 export interface PlayerSelectionSelect<T extends boolean = true> {
@@ -924,6 +956,32 @@ export interface HomeDockSelect<T extends boolean = true> {
         screenKey?: T;
         routePath?: T;
         externalUrl?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "about-us_select".
+ */
+export interface AboutUsSelect<T extends boolean = true> {
+  backHref?: T;
+  backButtonImage?: T;
+  companyLabel?: T;
+  missionText?: T;
+  teamTitle?: T;
+  defaultMemberKey?: T;
+  members?:
+    | T
+    | {
+        key?: T;
+        name?: T;
+        avatarStatic?: T;
+        avatarAnimated?: T;
+        realPhoto?: T;
+        bioText?: T;
         id?: T;
       };
   updatedAt?: T;

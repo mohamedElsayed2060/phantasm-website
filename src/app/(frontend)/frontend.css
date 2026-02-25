@@ -269,3 +269,11 @@ html[data-theme='light'] {
   opacity: initial;
 }
 /* w : 108   h: 196*/
+/* ✅ خلي السحب الأفقي في السلايدر أفقي فعلاً */
+.about-team-splide .splide__track {
+  touch-action: pan-x;
+}
+/* ✅ خلي الصور ما تمسكش سحب الصفحة */
+.about-no-pan {
+  touch-action: pan-y;
+}

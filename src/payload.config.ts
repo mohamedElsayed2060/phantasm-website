@@ -17,6 +17,7 @@ import { IslandScene } from './globals/IslandScene'
 import IslandBootDock from './globals/IslandBootDock'
 import { HomeDock } from './globals/HomeDock'
 import { ContactMessages } from './collections/ContactMessages'
+import { AboutUs } from './globals/AboutUs'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -65,7 +66,7 @@ export default buildConfig({
   }),
   collections: [Media, Users, SceneHotspots, Projects, ContactMessages],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [PlayerSelection, IslandBootDock, IslandScene, HomeDock],
+  globals: [PlayerSelection, IslandBootDock, IslandScene, HomeDock, AboutUs],
   plugins: [],
   secret: process.env.PAYLOAD_SECRET,
   sharp,
