@@ -1,6 +1,4 @@
-// src/app/(payload)/layout.tsx
-import '@payloadcms/next/css'
-import './custom.scss'
+import './custom.scss' // لو محتاجه
 import React from 'react'
 
 export default function Layout({ children }: { children: React.ReactNode }) {

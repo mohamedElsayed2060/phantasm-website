@@ -145,21 +145,7 @@ export interface UserAuthOperations {
 export interface Media {
   id: string;
   alt?: string | null;
-  caption?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
+  caption?: string | null;
   folder?: (string | null) | FolderInterface;
   updatedAt: string;
   createdAt: string;
@@ -331,18 +317,109 @@ export interface SceneHotspot {
  */
 export interface Project {
   id: string;
-  title: string;
+  order?: number | null;
+  projectName: string;
+  subTitle: string;
+  client: string;
+  type?: {
+    text?: string | null;
+    icon?: {
+      icon1?: (string | null) | Media;
+      icon2?: (string | null) | Media;
+    };
+  };
+  challenge?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  coverage?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  descriptions?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  achievement?: string | null;
   /**
-   * يُستخدم في /project-details/[slug]
+   * Short intro sentence shown in the project panel / popup before opening the details page.
    */
-  slug: string;
-  shortDescription?: string | null;
-  detailsText?: string | null;
-  previewImage?: (string | null) | Media;
+  panelIntro: string;
+  singleImage: string | Media;
   ctaLabel?: string | null;
   ctaType?: ('route' | 'external') | null;
   ctaUrl?: string | null;
-  order?: number | null;
+  /**
+   * Auto-generated from project name.
+   */
+  slug?: string | null;
+  technologies?:
+    | {
+        image?: (string | null) | Media;
+        name?: string | null;
+        semiLarge?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  carousel?: {
+    images?:
+      | {
+          image?: (string | null) | Media;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  googlePlayUrl?: {
+    img?: (string | null) | Media;
+    url?: string | null;
+  };
+  appStoreUrl?: {
+    img?: (string | null) | Media;
+    url?: string | null;
+  };
+  url?: string | null;
+  urlGroup?:
+    | {
+        url?: string | null;
+        name?: string | null;
+        btnText?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  comingSoon?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -609,15 +686,71 @@ export interface SceneHotspotsSelect<T extends boolean = true> {
  * via the `definition` "projects_select".
  */
 export interface ProjectsSelect<T extends boolean = true> {
-  title?: T;
-  slug?: T;
-  shortDescription?: T;
-  detailsText?: T;
-  previewImage?: T;
+  order?: T;
+  projectName?: T;
+  subTitle?: T;
+  client?: T;
+  type?:
+    | T
+    | {
+        text?: T;
+        icon?:
+          | T
+          | {
+              icon1?: T;
+              icon2?: T;
+            };
+      };
+  challenge?: T;
+  coverage?: T;
+  descriptions?: T;
+  achievement?: T;
+  panelIntro?: T;
+  singleImage?: T;
   ctaLabel?: T;
   ctaType?: T;
   ctaUrl?: T;
-  order?: T;
+  slug?: T;
+  technologies?:
+    | T
+    | {
+        image?: T;
+        name?: T;
+        semiLarge?: T;
+        id?: T;
+      };
+  carousel?:
+    | T
+    | {
+        images?:
+          | T
+          | {
+              image?: T;
+              id?: T;
+            };
+      };
+  googlePlayUrl?:
+    | T
+    | {
+        img?: T;
+        url?: T;
+      };
+  appStoreUrl?:
+    | T
+    | {
+        img?: T;
+        url?: T;
+      };
+  url?: T;
+  urlGroup?:
+    | T
+    | {
+        url?: T;
+        name?: T;
+        btnText?: T;
+        id?: T;
+      };
+  comingSoon?: T;
   updatedAt?: T;
   createdAt?: T;
 }

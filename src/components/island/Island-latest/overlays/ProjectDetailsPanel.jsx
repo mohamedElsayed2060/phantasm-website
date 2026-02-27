@@ -15,6 +15,8 @@ export default function ProjectDetailsPanel({
   onClose,
   width,
 }) {
+  console.log(project)
+
   const splashRouter = useSplashRouter(350)
   if (!open || !project) return null
 
@@ -139,9 +141,9 @@ export default function ProjectDetailsPanel({
 }
 
 function DetailsContent({ project, onGo }) {
-  const title = project?.title || 'PROJECT'
+  const title = project?.projectName || 'PROJECT'
   const text =
-    project?.detailsText ||
+    project?.panelIntro ||
     'HERE IS A INTRO FOR THE ISLAND AND MORE INTRO HERE IS A INTRO FOR THE ISLAND AND MORE INTRO...'
 
   const images = Array.isArray(project?.images)
@@ -149,7 +151,7 @@ function DetailsContent({ project, onGo }) {
     : project?.previewImage
       ? [project.previewImage]
       : []
-
+  const singleImage = project.singleImage
   // ✅ Scroll plumbing for PixelScrollTrack
   const scrollRef = useRef(null)
   const [scrollState, setScrollState] = useState({
@@ -258,11 +260,11 @@ function DetailsContent({ project, onGo }) {
 
       {/* RIGHT: images */}
       <div className="w-full p-[2px] pr-[5px] md:basis-[42%] md:flex-none flex rounded-t-2xl md:rounded-r-2xl bg-white items-center justify-center">
-        {images.length ? (
+        {singleImage ? (
           <div className="w-full h-full flex items-center justify-center">
             {/* ✅ صورة واحدة تملا المساحة */}
             <img
-              src={images[0]}
+              src={singleImage}
               alt={title}
               className="w-full h-full max-h-[220px] md:max-h-[999px] object-contain drop-shadow-xl"
               draggable={false}

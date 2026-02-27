@@ -1,16 +1,12 @@
+import '@payloadcms/next/css' // ✅ مهم جدًا: يبقى هنا (root) عشان الهيدرشن
 import './globals.css'
-import { Inter } from 'next/font/google'
 
-import config from '@payload-config'
+import { Inter } from 'next/font/google'
 import { handleServerFunctions, RootLayout as PayloadRootLayout } from '@payloadcms/next/layouts'
-import { importMap } from './(payload)/admin/importMap.js'
+import config from '@payload-config'
+import { importMap } from './(payload)/admin/importMap'
 
 const inter = Inter({ subsets: ['latin'] })
-
-export const metadata = {
-  title: { default: 'Phantasm', template: '%s | Phantasm' },
-  description: 'Phantasm website',
-}
 
 const serverFunction = async (args) => {
   'use server'

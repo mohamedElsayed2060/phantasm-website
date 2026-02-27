@@ -131,7 +131,7 @@ export default function ProjectsPopover({
                       backgroundColor: isActive ? '#7a1010' : 'transparent',
                     }}
                   >
-                    {p.title}
+                    {p.projectName}
                   </button>
                 )
 

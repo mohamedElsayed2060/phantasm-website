@@ -45,21 +45,19 @@ export async function getIslandHotspots() {
 
   return docs.map((h) => {
     const projectsRaw = Array.isArray(h?.projects) ? h.projects : []
-
     const projects = projectsRaw
       .map((p) => {
-        const previewRel = p?.previewImage ? imgUrl(p.previewImage) : ''
+        const singleImage = p?.singleImage ? imgUrl(p.singleImage) : ''
         return {
           id: p?.id,
           slug: p?.slug,
-          title: p?.title,
-          shortDescription: p?.shortDescription,
-          detailsText: p?.detailsText,
-          previewImage: absUrl(previewRel, base),
           ctaLabel: p?.ctaLabel,
           ctaType: p?.ctaType,
           ctaUrl: p?.ctaUrl,
           order: Number(p?.order ?? 0),
+          projectName: p?.projectName,
+          panelIntro: p?.panelIntro,
+          singleImage: absUrl(singleImage, base),
         }
       })
       .filter((p) => p?.id)
