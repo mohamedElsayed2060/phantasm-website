@@ -9,11 +9,14 @@ export default function SsrSplashHider({ minMs = 650 }) {
     const el = document.getElementById('ssr-splash')
     if (!el) return
 
-    const t = setTimeout(() => {
-      el.style.transition = 'opacity 180ms ease'
-      el.style.opacity = '0'
-      setTimeout(() => el.remove(), 220)
-    }, Math.max(0, Number(minMs) || 0))
+    const t = setTimeout(
+      () => {
+        el.style.transition = 'opacity 180ms ease'
+        el.style.opacity = '0'
+        setTimeout(() => el.remove(), 220)
+      },
+      Math.max(0, Number(minMs) || 0),
+    )
 
     return () => clearTimeout(t)
   }, [minMs])

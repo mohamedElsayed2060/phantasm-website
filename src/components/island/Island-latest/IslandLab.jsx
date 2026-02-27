@@ -502,7 +502,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
   return (
     <div
       ref={viewportRef}
-      className="fixed inset-0 bg-[#050505] overflow-hidden"
+      className="island-page fixed inset-0 bg-[#050505] overflow-hidden"
       style={{ opacity: sceneReady ? 1 : 0 }}
     >
       {showLoading ? <div className="absolute inset-0 z-[200] bg-[#050505]" /> : null}

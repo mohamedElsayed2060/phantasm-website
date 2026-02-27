@@ -255,10 +255,11 @@
 
 html {
   opacity: 0;
+  scroll-behavior: smooth;
 }
 
-body * {
-  scroll-behavior: smooth !important;
+.island-page,
+.island-page * {
   overscroll-behavior: none;
 }
 .silkscreen-font * {

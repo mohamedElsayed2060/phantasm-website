@@ -99,19 +99,10 @@ export default function AboutUsClient({ data }) {
     imgUrl(selectedMember?.avatarAnimated) ||
     null
 
-  const isFinePointer = () =>
-    typeof window !== 'undefined' &&
-    window.matchMedia &&
-    window.matchMedia('(pointer: fine)').matches
   return (
     <div
       ref={pageRef}
       className="h-[100dvh] w-full overflow-y-auto bg-[#120707] text-white px-4 py-6 outline-none"
-      style={{
-        WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: 'contain',
-        touchAction: 'pan-y',
-      }}
     >
       {' '}
       {/* ====== TOP: back button + mission box ====== */}
@@ -143,11 +134,11 @@ export default function AboutUsClient({ data }) {
           className="mb-4"
         >
           <div className="flex flex-wrap items-center gap-3 p-5 md:gap-6 md:p-12">
-            <div className="shrink-0 text-[20px] md:text-[26px] tracking-[4px] font-semibold">
+            <div className="shrink-0  w-full md:w-auto text-[20px] md:text-[26px] tracking-[4px] font-semibold">
               {companyLabel}
             </div>
 
-            <div className="flex-1 text-[15px] md:text-[17px] leading-[1.55] opacity-90 whitespace-pre-line">
+            <div className="flex-1  text-[15px] md:text-[17px] leading-[1.55] opacity-90 whitespace-pre-line">
               {missionText}
             </div>
           </div>
@@ -162,7 +153,7 @@ export default function AboutUsClient({ data }) {
           bg="#951212"
           className="mb-0"
         >
-          <div className="p-5 text-center text-[20px] tracking-[3px] font-semibold">
+          <div className="p-4 text-center text-[20px] tracking-[3px] font-semibold">
             {teamTitle}
           </div>
         </PixelFrameOverlay>
@@ -174,18 +165,9 @@ export default function AboutUsClient({ data }) {
           bw={12}
           pad={13}
           bg="#951212"
-          className="mb-4 pt-5"
+          className="md:mb-4 pt-5"
         >
-          <div
-            className="pt-3 md:pt-6"
-            onWheelCapture={(e) => {
-              if (!isFinePointer()) return // ✅ موبايل: سيبه
-              if (e.ctrlKey) return
-              e.preventDefault()
-              const el = pageRef.current
-              if (el) el.scrollTop += e.deltaY
-            }}
-          >
+          <div className="pt-3 md:pt-6">
             <Splide
               options={{
                 type: 'slide',
@@ -232,50 +214,99 @@ export default function AboutUsClient({ data }) {
           </div>
         </PixelFrameOverlay>
 
-        {/* ====== MEMBER DETAILS (left image+name, right typewriter) ====== */}
-        <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-0">
-          {/* Left box */}
-          <PixelFrameOverlay frameSrc={FRAME_MAIN} slice={16} bw={16} pad={10} bg="#1B0C0C">
-            <div
-              onWheelCapture={(e) => {
-                if (!isFinePointer()) return // ✅ موبايل: سيبه
-                if (e.ctrlKey) return
-                e.preventDefault()
-                const el = pageRef.current
-                if (el) el.scrollTop += e.deltaY
-              }}
-            >
-              <div className="flex flex-col">
-                <div className="w-full aspect-[1/1] overflow-hidden flex items-center justify-center bg-black/20 about-no-pan">
-                  {detailsImg ? (
-                    <img
-                      src={detailsImg}
-                      alt={selectedMember?.name || 'Member'}
-                      draggable={false}
-                      className="w-full h-full object-cover"
-                      style={{ imageRendering: 'pixelated' }}
-                    />
-                  ) : (
-                    <div className="text-xs opacity-70">No Image</div>
+        {/* ====== MEMBER DETAILS SECTION ====== */}
+        <div className="relative md:mt-10 mb-10">
+          {/* الـ margin الخارجي ده عشان نسيب مساحة للكارت لما يخرج بره م يخبطش في اللي فوقيه */}
+
+          <PixelFrameOverlay
+            frameSrc={'/frames/about-us-first-frame.png'}
+            slice={16}
+            bw={16}
+            pad={4}
+            bg="#1B0C0C"
+            className="overflow-visible"
+          >
+            <div className="flex flex-col md:flex-row md:gap-6 md:p-[14px]">
+              {/* ==========================================
+          LEFT PANEL (The Overlapping Card)
+      ========================================== */}
+
+              <div
+                className="
+                    relative w-full md:w-[220px] mx-auto z-20
+                    md:absolute md:left-0 md:-top-2 md:-bottom-2 md:w-[260px] md:m-0
+                      "
+              >
+                <PixelFrameOverlay
+                  frameSrc={'/frames/about-photo-fram.png'}
+                  slice={16}
+                  bw={16}
+                  pad={10}
+                  bg="#1B0C0C"
+                  className="h-full md:min-h-[300px]"
+                >
+                  <div className="h-full flex flex-col min-h-[280px] md:min-h-0 bg-[#951212] p-[]">
+                    {/* ✅ Image Frame (this is the part that stretches) */}
+                    <div className="flex-1 min-h-[190px] md:min-h-0 flex">
+                      <PixelFrameOverlay
+                        frameSrc={FRAME_MAIN} // ✅ الفريم الجديد حول الصورة (غيّر الاسم لمسارك)
+                        slice={16}
+                        bw={16}
+                        pad={10}
+                        bg="#1B0C0C"
+                        className="w-full h-full md:min-h-full min-h-[260px]"
+                      >
+                        {/* ✅ Center the image + show all of it */}
+                        <div className="w-full h-full flex items-center justify-center overflow-hidden">
+                          {detailsImg ? (
+                            <img
+                              src={detailsImg}
+                              alt={selectedMember?.name || 'Member'}
+                              draggable={false}
+                              className="max-w-full max-h-full object-contain"
+                              style={{ imageRendering: 'pixelated' }}
+                            />
+                          ) : (
+                            <div className="text-xs opacity-70">No Image</div>
+                          )}
+                        </div>
+                      </PixelFrameOverlay>
+                    </div>
+
+                    {/* ✅ Name Label stays stuck to bottom */}
+                    <div className="m-1 md:m-2">
+                      <PixelFrameOverlay
+                        frameSrc={'/frames/photo-name.png'}
+                        slice={16}
+                        bw={16}
+                        pad={6}
+                        bg="#951212"
+                      >
+                        <div className="text-center text-[13px] md:text-[16px] tracking-[2px] font-semibold uppercase text-white">
+                          {selectedMember?.name || 'NAME'}
+                        </div>
+                      </PixelFrameOverlay>
+                    </div>
+                  </div>
+                </PixelFrameOverlay>
+              </div>
+
+              {/* ==========================================
+          RIGHT CONTENT (Text & Layout Spacer)
+      ========================================== */}
+
+              {/* Spacer for Desktop: Keeps text from going under the absolute panel */}
+              <div className="hidden md:block md:w-[260px] md:shrink-0 pointer-events-none" />
+
+              {/* Bio Text */}
+              <div className="flex-1 p-3 md:py-10 md:min-h-[300px] flex items-center md:ms-3">
+                <div className="md:w-[85%] text-[12px] md:text-[14px] leading-[1.8] opacity-90 whitespace-pre-line min-h-[150px] font-medium">
+                  {typedBio}
+                  {isTyping && (
+                    <span className="inline-block w-[8px] h-[14px] bg-white ml-1 animate-pulse" />
                   )}
                 </div>
-
-                <div className="mt-3">
-                  <PixelFrameOverlay frameSrc={FRAME_THIN} slice={16} bw={16} pad={6} bg="#951212">
-                    <div className="text-center text-[12px] tracking-[3px] font-semibold">
-                      {selectedMember?.name || ''}
-                    </div>
-                  </PixelFrameOverlay>
-                </div>
               </div>
-            </div>
-          </PixelFrameOverlay>
-
-          {/* Right box */}
-          <PixelFrameOverlay frameSrc={FRAME_MAIN} slice={16} bw={16} pad={14} bg="#1B0C0C">
-            <div className="text-[11px] leading-[1.6] opacity-90 whitespace-pre-line min-h-[180px]">
-              {typedBio}
-              {isTyping ? <span className="inline-block w-[8px] animate-pulse">▌</span> : null}
             </div>
           </PixelFrameOverlay>
         </div>
