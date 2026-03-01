@@ -331,6 +331,7 @@ export default function ProjectsOverlay({
           >
             <ProjectsPopover
               title={overlay.spot.name}
+              categoryTitle={overlay.spot.projectCategoryTitle || ''} // ✅
               projects={overlay.spot.projects || []}
               placement={placement}
               activeProjectId={activeProject?.id}

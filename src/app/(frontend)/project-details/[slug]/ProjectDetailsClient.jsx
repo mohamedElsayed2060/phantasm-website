@@ -1,98 +1,64 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import SplashLink from '@/components/overlays/SplashLink'
-
-// ✅ Helper لاختيار أفضل صورة متاحة من Payload
-function pickThumb(p) {
-  return (
-    p?.thumbSrc ||
-    p?.thumb?.url ||
-    p?.previewImage?.url ||
-    p?.previewImage?.sizes?.large?.url ||
-    p?.previewImage?.sizes?.medium?.url ||
-    p?.previewImage?.sizes?.small?.url ||
-    p?.thumb?.sizes?.medium?.url ||
-    p?.thumb?.sizes?.small?.url ||
-    p?.thumb?.thumbnailURL ||
-    null
-  )
-}
+import ProjectMedia from '../ui/ProjectMedia'
+import ProjectDetailsScrollPanel from '../ui/ProjectDetailsScrollPanel'
+import MobileDetailsSheet from '../ui/MobileDetailsSheet'
 
 export default function ProjectDetailsClient({ project }) {
-  // ✅ خلي أي mapping موجود عندك هنا (لو احتجته لاحقًا)
+  const [panelH, setPanelH] = useState(null)
+
   const data = useMemo(() => project || null, [project])
+  if (!data) return null
 
-  if (!data) {
-    return (
-      <div className="min-h-screen bg-black text-white p-6">
-        <SplashLink
-          href={'/'}
-          minMs={350}
-          className="inline-block mb-6 px-4 py-2 rounded bg-white/10 hover:bg-white/15"
-        >
-          ← Back
-        </SplashLink>
-        <div className="text-white/80">Project not found.</div>
-      </div>
-    )
-  }
-
-  const title = data?.title || 'Project'
-  const short = data?.shortDescription || data?.description || ''
-  const img = pickThumb(data)
-
-  // Payload previewImage alt ممكن يكون في previewImage.alt أو .altText حسب إعداداتكم
-  const imgAlt = data?.previewImage?.alt || data?.previewImage?.altText || data?.thumb?.alt || title
-
+  const backHref = '/'
+  const mediaRef = useRef(null)
+  useEffect(() => {
+    const calc = () => setPanelH(Math.max(260, window.innerHeight - 50))
+    calc()
+    window.addEventListener('resize', calc)
+    return () => window.removeEventListener('resize', calc)
+  }, [])
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <SplashLink
-          href={'/'}
-          minMs={350}
-          className="inline-block mb-6 px-4 py-2 rounded bg-white/10 hover:bg-white/15"
-        >
-          ← Back
-        </SplashLink>
-
-        <div className="grid gap-6 md:grid-cols-[1fr_420px]">
-          {/* Text */}
-          <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-            <div className="text-[12px] uppercase tracking-[0.25em] text-white/60">
-              Project details
+    <div className="w-full bg-black text-white">
+      {/* Desktop: no page scroll, right panel scroll only */}
+      <div className="hidden md:block h-[100dvh] min-h-[520px] overflow-hidden">
+        <div className="h-full grid grid-cols-2">
+          {/* LEFT: media + back button */}
+          <div className="relative bg-white h-full">
+            {/* back button inside left */}
+            <div className="absolute top-4 left-4 z-20">
+              <SplashLink href={backHref} minMs={350} className="inline-block">
+                <img src="/back-icon.png" alt="Back" className="w-9 h-9" />
+              </SplashLink>
             </div>
 
-            <h1 className="mt-2 text-2xl font-semibold">{title}</h1>
-
-            {data?.tag ? (
-              <div className="mt-2 inline-flex text-[12px] px-2 py-1 rounded bg-white/10 border border-white/10">
-                {data.tag}
-              </div>
-            ) : null}
-
-            <div className="mt-4 text-[14px] leading-relaxed text-white/80 whitespace-pre-line">
-              {short || '—'}
-            </div>
-
-            {/* placeholders for later fields */}
-            <div className="mt-6 grid gap-2 text-[12px] text-white/60">
-              {data?.client ? <div>Client: {data.client}</div> : null}
-              {data?.type ? <div>Type: {data.type}</div> : null}
-              {data?.coverage ? <div>Coverage: {data.coverage}</div> : null}
-            </div>
+            <ProjectMedia project={data} />
           </div>
 
-          {/* Image (later slider) */}
-          <div className="rounded-xl overflow-hidden border border-white/10 bg-white/95">
-            {img ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={img} alt={imgAlt} className="w-full h-full object-cover" />
-            ) : (
-              <div className="h-[380px] grid place-items-center text-black/60">No image</div>
-            )}
+          {/* RIGHT: scroll panel ALWAYS full height */}
+          <div className="bg-black h-full flex items-center justify-center">
+            <div className="w-full h-full p-6">
+              {/* ✅ خلي panel ياخد طول الشاشة كله */}
+              <ProjectDetailsScrollPanel project={data} maxHeightPx={panelH || 520} />
+            </div>
           </div>
         </div>
+      </div>
+      {/* Mobile */}
+      <div className="md:hidden min-h-[100dvh] bg-white relative">
+        <div ref={mediaRef} className="bg-white min-h-[260px] flex items-center">
+          <ProjectMedia project={data} />
+        </div>
+
+        <div className="absolute top-3 left-3 z-[95]">
+          <SplashLink href={backHref} minMs={350} className="inline-block">
+            <img src="/back-icon.png" alt="Back" className="w-9 h-9" />
+          </SplashLink>
+        </div>
+
+        <MobileDetailsSheet project={data} anchorRef={mediaRef} />
       </div>
     </div>
   )

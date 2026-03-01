@@ -71,7 +71,7 @@ export default function PixelScrollTrack({
       <div
         ref={trackRef}
         onClick={handleTrackClick}
-        className="relative"
+        className="relative rounded-xl"
         style={{
           width: 14,
           height: trackHeight,

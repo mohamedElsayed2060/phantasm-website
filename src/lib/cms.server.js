@@ -43,7 +43,7 @@ export async function getProjectBySlugServer(slug) {
   if (!s) return null
 
   const data = await fetchJSONServer(
-    `/api/projects?where[slug][equals]=${encodeURIComponent(s)}&depth=3&limit=1`,
+    `/api/projects?where[slug][equals]=${encodeURIComponent(s)}&depth=4&limit=1`,
     { revalidate: 30, tags: ['projects', `project:${s}`] },
   )
 

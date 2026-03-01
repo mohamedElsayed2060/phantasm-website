@@ -70,6 +70,7 @@ export interface Config {
     media: Media;
     users: User;
     'scene-hotspots': SceneHotspot;
+    'project-categories': ProjectCategory;
     projects: Project;
     'contact-messages': ContactMessage;
     'payload-kv': PayloadKv;
@@ -87,6 +88,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'scene-hotspots': SceneHotspotsSelect<false> | SceneHotspotsSelect<true>;
+    'project-categories': ProjectCategoriesSelect<false> | ProjectCategoriesSelect<true>;
     projects: ProjectsSelect<false> | ProjectsSelect<true>;
     'contact-messages': ContactMessagesSelect<false> | ContactMessagesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -293,7 +295,7 @@ export interface SceneHotspot {
    * How long the building spawn animation lasts (milliseconds).
    */
   spawnDurationMs?: number | null;
-  projects?: (string | Project)[] | null;
+  projectCategory: string | ProjectCategory;
   introEnabled?: boolean | null;
   introPages?:
     | {
@@ -313,11 +315,28 @@ export interface SceneHotspot {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "project-categories".
+ */
+export interface ProjectCategory {
+  id: string;
+  order?: number | null;
+  title: string;
+  /**
+   * Auto-generated from category title.
+   */
+  slug?: string | null;
+  subtitle?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "projects".
  */
 export interface Project {
   id: string;
   order?: number | null;
+  category: string | ProjectCategory;
   projectName: string;
   subTitle: string;
   client: string;
@@ -326,6 +345,7 @@ export interface Project {
     icon?: {
       icon1?: (string | null) | Media;
       icon2?: (string | null) | Media;
+      icon3?: (string | null) | Media;
     };
   };
   challenge?: {
@@ -474,6 +494,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'scene-hotspots';
         value: string | SceneHotspot;
+      } | null)
+    | ({
+        relationTo: 'project-categories';
+        value: string | ProjectCategory;
       } | null)
     | ({
         relationTo: 'projects';
@@ -663,7 +687,7 @@ export interface SceneHotspotsSelect<T extends boolean = true> {
   buildingSpawn?: T;
   buildingLoop?: T;
   spawnDurationMs?: T;
-  projects?: T;
+  projectCategory?: T;
   introEnabled?: T;
   introPages?:
     | T
@@ -683,10 +707,23 @@ export interface SceneHotspotsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "project-categories_select".
+ */
+export interface ProjectCategoriesSelect<T extends boolean = true> {
+  order?: T;
+  title?: T;
+  slug?: T;
+  subtitle?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "projects_select".
  */
 export interface ProjectsSelect<T extends boolean = true> {
   order?: T;
+  category?: T;
   projectName?: T;
   subTitle?: T;
   client?: T;
@@ -699,6 +736,7 @@ export interface ProjectsSelect<T extends boolean = true> {
           | {
               icon1?: T;
               icon2?: T;
+              icon3?: T;
             };
       };
   challenge?: T;

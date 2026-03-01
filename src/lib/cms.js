@@ -65,19 +65,19 @@ export async function getPlayerSelection() {
   }).catch(() => null)
 }
 
-export async function getProjectBySlug(slug, opts = {}) {
-  const safeSlug = encodeURIComponent(String(slug || '').trim())
+// export async function getProjectBySlug(slug, opts = {}) {
+//   const safeSlug = encodeURIComponent(String(slug || '').trim())
 
-  const url = `/api/projects?where[slug][equals]=${safeSlug}&limit=1&depth=3`
+//   const url = `/api/projects?where[slug][equals]=${safeSlug}&limit=1&depth=3`
 
-  const data = await fetchJSON(url, {
-    revalidate: opts.revalidate ?? 60,
-    tags: opts.tags ?? ['projects'],
-  })
+//   const data = await fetchJSON(url, {
+//     revalidate: opts.revalidate ?? 60,
+//     tags: opts.tags ?? ['projects'],
+//   })
 
-  const doc = data?.docs?.[0] || null
-  return doc
-}
+//   const doc = data?.docs?.[0] || null
+//   return doc
+// }
 
 export async function getHomeDock() {
   return fetchJSON('/api/globals/home-dock?depth=2', {

@@ -18,6 +18,7 @@ import IslandBootDock from './globals/IslandBootDock'
 import { HomeDock } from './globals/HomeDock'
 import { ContactMessages } from './collections/ContactMessages'
 import { AboutUs } from './globals/AboutUs'
+import { ProjectCategories } from './collections/ProjectCategories'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -64,7 +65,7 @@ export default buildConfig({
   db: mongooseAdapter({
     url: process.env.DATABASE_URL || '',
   }),
-  collections: [Media, Users, SceneHotspots, Projects, ContactMessages],
+  collections: [Media, Users, SceneHotspots, ProjectCategories, Projects, ContactMessages],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [PlayerSelection, IslandBootDock, IslandScene, HomeDock, AboutUs],
   plugins: [],

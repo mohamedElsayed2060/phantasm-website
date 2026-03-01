@@ -16,7 +16,20 @@ function absUrl(u, base) {
   if (s.startsWith('/')) return base + s
   return base + '/' + s
 }
-
+function mapProjectCard(p) {
+  const singleImage = p?.singleImage ? imgUrl(p.singleImage) : ''
+  return {
+    id: p?.id,
+    slug: p?.slug,
+    ctaLabel: p?.ctaLabel,
+    ctaType: p?.ctaType,
+    ctaUrl: p?.ctaUrl,
+    order: Number(p?.order ?? 0),
+    projectName: p?.projectName,
+    panelIntro: p?.panelIntro,
+    singleImage: absUrl(singleImage, base),
+  }
+}
 export async function getIslandScene() {
   try {
     const g = await fetchJSONServer('/api/globals/islandScene?depth=2', {
@@ -36,46 +49,88 @@ export async function getIslandScene() {
 }
 
 export async function getIslandHotspots() {
-  const data = await fetchJSONServer('/api/scene-hotspots?limit=200&depth=3&sort=order', {
+  const data = await fetchJSONServer('/api/scene-hotspots?limit=200&depth=2&sort=order', {
     revalidate: 30,
     tags: ['island'],
   })
 
   const docs = Array.isArray(data?.docs) ? data.docs : []
 
+  const mapProjectCard = (p) => {
+    const singleImageRel = p?.singleImage ? imgUrl(p.singleImage) : ''
+    return {
+      id: p?.id,
+      slug: p?.slug,
+      ctaLabel: p?.ctaLabel,
+      ctaType: p?.ctaType,
+      ctaUrl: p?.ctaUrl,
+      order: Number(p?.order ?? 0),
+      projectName: p?.projectName,
+      panelIntro: p?.panelIntro,
+      singleImage: absUrl(singleImageRel, base),
+    }
+  }
+
+  // ✅ collect category ids from hotspots (now required, but keep safe)
+  const catIds = Array.from(
+    new Set(
+      docs
+        .map((h) => {
+          const c = h?.projectCategory
+          if (!c) return null
+          return typeof c === 'string' ? c : c?.id || null
+        })
+        .filter(Boolean),
+    ),
+  )
+
+  // ✅ fetch ALL projects for these categories in ONE request
+  const projectsByCat = {}
+  if (catIds.length) {
+    const qs = new URLSearchParams()
+    qs.set('limit', '500')
+    qs.set('depth', '1')
+    qs.set('sort', 'order')
+    qs.set('where[category][in]', catIds.join(','))
+
+    const projRes = await fetchJSONServer(`/api/projects?${qs.toString()}`, {
+      revalidate: 30,
+      tags: ['island'],
+    })
+
+    const projDocs = Array.isArray(projRes?.docs) ? projRes.docs : []
+
+    for (const p of projDocs) {
+      const cat = p?.category
+      const catId = typeof cat === 'string' ? cat : cat?.id
+      if (!catId) continue
+      ;(projectsByCat[catId] ||= []).push(mapProjectCard(p))
+    }
+
+    for (const id of Object.keys(projectsByCat)) {
+      projectsByCat[id].sort((a, b) => (a.order || 0) - (b.order || 0))
+    }
+  }
+
   return docs.map((h) => {
-    const projectsRaw = Array.isArray(h?.projects) ? h.projects : []
-    const projects = projectsRaw
-      .map((p) => {
-        const singleImage = p?.singleImage ? imgUrl(p.singleImage) : ''
-        return {
-          id: p?.id,
-          slug: p?.slug,
-          ctaLabel: p?.ctaLabel,
-          ctaType: p?.ctaType,
-          ctaUrl: p?.ctaUrl,
-          order: Number(p?.order ?? 0),
-          projectName: p?.projectName,
-          panelIntro: p?.panelIntro,
-          singleImage: absUrl(singleImage, base),
-        }
-      })
-      .filter((p) => p?.id)
-      .sort((a, b) => (a.order || 0) - (b.order || 0))
+    const cat = h?.projectCategory || null
+    const catId = !cat ? null : typeof cat === 'string' ? cat : cat?.id || null
+
+    const catTitle =
+      typeof cat === 'object' ? (typeof cat?.title === 'string' ? cat.title : cat?.title) || '' : ''
+
+    const projects = catId ? projectsByCat[catId] || [] : []
 
     const hotspotIdleRel = h?.hotspotIdle ? imgUrl(h.hotspotIdle) : ''
     const buildingSpawnRel = h?.buildingSpawn ? imgUrl(h.buildingSpawn) : ''
     const buildingLoopRel = h?.buildingLoop ? imgUrl(h.buildingLoop) : ''
 
-    // ✅ Building intro pages (NO fallback)
     const introPagesRaw = Array.isArray(h?.introPages) ? h.introPages : []
     const introPages = introPagesRaw
       .map((pg) => {
         const title = String(pg?.title || '').trim()
         const parasRaw = Array.isArray(pg?.paragraphs) ? pg.paragraphs : []
         const paragraphs = parasRaw.map((x) => String(x?.text || '').trim()).filter(Boolean)
-
-        // لازم title + على الأقل paragraph واحدة
         if (!title || paragraphs.length === 0) return null
         return { title, paragraphs }
       })
@@ -100,10 +155,12 @@ export async function getIslandHotspots() {
       buildingSpawnSrc: absUrl(buildingSpawnRel, base),
       buildingLoopSrc: absUrl(buildingLoopRel, base),
 
-      // ✅ new dialog model
       introEnabled: h?.introEnabled !== false,
       introPages,
 
+      // ✅ category driven
+      projectCategoryId: catId,
+      projectCategoryTitle: catTitle,
       projects,
     }
   })

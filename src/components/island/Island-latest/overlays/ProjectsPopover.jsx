@@ -7,19 +7,14 @@ import PixelScrollTrack from '@/components/island/Island-latest/overlays/compone
 function ListDivider({ width = 'calc(100% - 26px)', align = 'center' }) {
   return (
     <div className="w-full flex" style={{ justifyContent: align }}>
-      <div
-        style={{
-          width,
-          height: 2,
-          backgroundColor: '#5C3131',
-        }}
-      />
+      <div style={{ width, height: 2, backgroundColor: '#5C3131' }} />
     </div>
   )
 }
 
 export default function ProjectsPopover({
   title,
+  categoryTitle, // ✅ NEW
   projects = [],
   placement = 'top',
   onClose,
@@ -44,7 +39,7 @@ export default function ProjectsPopover({
       onMeasuredHeight?.(h)
       setMeasuredOnce(true)
     }
-  }, [projects, measuredOnce, onMeasuredHeight])
+  }, [projects, measuredOnce, onMeasuredHeight, categoryTitle])
 
   useLayoutEffect(() => {
     const el = scrollRef.current
@@ -68,23 +63,22 @@ export default function ProjectsPopover({
       el.removeEventListener('scroll', update)
       ro.disconnect()
     }
-  }, [projects])
+  }, [projects, categoryTitle])
 
   const handleScrollTo = (newScrollTop) => {
     if (scrollRef.current) scrollRef.current.scrollTop = newScrollTop
   }
 
-  // ✅ HEADER اتشال، فخليها 0 (عشان أي حسابات قديمة)
-  const HEADER_H = 0
+  const showHeader = Boolean(String(categoryTitle || '').trim())
+  const HEADER_H = showHeader ? 44 : 0
 
-  const LIST_H = fixedHeight - HEADER_H
+  const LIST_H = Math.max(120, fixedHeight - HEADER_H)
   const TRACK_H = LIST_H
 
   const needsScroll = scrollState.scrollHeight > scrollState.clientHeight + 1
 
   return (
-    <div ref={ref} className="flex flex-row items-start gap-[4px]">
-      {/* ══ Main pixel-framed box ════════════════════════════════════════════ */}
+    <div ref={ref} className="flex flex-row items-end gap-[4px]">
       <PixelFrameOverlay
         frameSrc="/frames/dock-frame.png"
         slice={12}
@@ -92,7 +86,34 @@ export default function ProjectsPopover({
         pad={0}
         className="flex flex-col overflow-hidden"
       >
-        {/* ── List ───────────────────────────────────────────────────────── */}
+        {/* ✅ Header */}
+        {showHeader ? (
+          <div className="px-2 pt-2" style={{ backgroundColor: '#2A1616' }}>
+            <PixelFrameOverlay
+              frameSrc="/frames/title-fram.png"
+              slice={12}
+              bw={9}
+              pad={2}
+              className="w-full"
+            >
+              <div
+                className="px-3 py-[7px] text-center rounded-xl mb-1"
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: '#ffffff',
+                  backgroundColor: '#7a1010',
+                }}
+              >
+                {categoryTitle}
+              </div>
+            </PixelFrameOverlay>
+          </div>
+        ) : null}
+
+        {/* List */}
         <div
           ref={scrollRef}
           data-overlay-scroll="true"
@@ -100,13 +121,14 @@ export default function ProjectsPopover({
           style={{
             width: 230,
             height: LIST_H,
-            overflowY: 'scroll',
+            overflowY: 'auto',
             overflowX: 'hidden',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
             backgroundColor: '#2A1616',
             touchAction: 'pan-y',
             WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain',
           }}
         >
           <style>{`.psp-list::-webkit-scrollbar{display:none}`}</style>
@@ -137,7 +159,6 @@ export default function ProjectsPopover({
 
                 return (
                   <div key={p.id} className="w-full">
-                    {/* ✅ Active: بوردر بالفريم */}
                     {isActive ? (
                       <div className="mx-[5px]">
                         <PixelFrameOverlay
@@ -154,7 +175,6 @@ export default function ProjectsPopover({
                       ItemButton
                     )}
 
-                    {/* ✅ Divider تحت الكل ماعدا آخر واحد */}
                     {!isLast ? <ListDivider width="calc(100% - 30px)" align="center" /> : null}
                   </div>
                 )
@@ -171,7 +191,6 @@ export default function ProjectsPopover({
         </div>
       </PixelFrameOverlay>
 
-      {/* ══ Custom Pixel Scrollbar (نفس الكومبوننت الجديد) ═══════════════════ */}
       {needsScroll ? (
         <PixelScrollTrack
           scrollTop={scrollState.scrollTop}
@@ -179,11 +198,6 @@ export default function ProjectsPopover({
           clientHeight={scrollState.clientHeight}
           trackHeight={TRACK_H}
           onScrollTo={handleScrollTo}
-          // optional overrides لو عايز
-          // frameSrc="/frames/scroll-frame.png"
-          // slice={7}
-          // bw={7}
-          // pad={0}
         />
       ) : null}
     </div>

@@ -60,11 +60,15 @@ export const SceneHotspots: CollectionConfig = {
     },
     // ✅ link projects
     {
-      name: 'projects',
+      name: 'projectCategory',
+      label: 'Projects Category',
       type: 'relationship',
-      relationTo: 'projects',
-      hasMany: true,
+      relationTo: 'project-categories',
+      required: true,
+      hasMany: false,
+      index: true,
     },
+
     // ✅ Building Intro Dialog (NEW)
     {
       name: 'introEnabled',
