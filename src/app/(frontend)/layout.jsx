@@ -7,7 +7,14 @@ import PageTransition from '@/components/motion/PageTransition'
 import SsrSplashHider from '@/components/overlays/SsrSplashHider'
 
 export const dynamic = 'force-dynamic'
-
+export const metadata = {
+  title: {
+    default: 'PHANTASM',
+    template: '%s | PHANTASM',
+  },
+  description:
+    'We specialise in creating engaging games and software applications that bring your ideas to life.',
+}
 export default async function FrontendLayout({ children }) {
   const globals = await getFrontendGlobals()
 
@@ -20,16 +27,22 @@ export default async function FrontendLayout({ children }) {
       <div
         id="ssr-splash"
         className="fixed inset-0 z-[9999] flex items-center justify-center bg-black"
+        style={{
+          backgroundImage: 'url(/intro.png)',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
       >
         <div className="flex flex-col items-center gap-4">
-          <img
+          {/* <img
             src={logoUrl}
             alt={companyName}
             draggable={false}
             className="w-[140px] h-auto select-none"
             style={{ imageRendering: 'pixelated' }}
-          />
-          <div className="text-white/80 tracking-[0.24em] text-xs">{companyName}</div>
+          /> */}
+          {/* <div className="text-white/80 tracking-[0.24em] text-xs">{companyName}</div> */}
           <div className="mt-2 h-[2px] w-[160px] overflow-hidden bg-white/10 rounded">
             <div className="h-full w-1/3 bg-white/60 animate-[phantasmBar_0.9s_linear_infinite]" />
           </div>

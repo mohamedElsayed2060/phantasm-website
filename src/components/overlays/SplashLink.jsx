@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 export default function SplashLink({
   href,
   children,
-  minMs = 350,
+  minMs = 750,
   replace = false,
   prefetch = true,
   className,

@@ -46,10 +46,16 @@ export default function SplashOverlay({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black"
+          style={{
+            backgroundImage: 'url(/intro.png)',
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
         >
           <div className="flex flex-col items-center gap-4">
             {/* Logo */}
-            <motion.img
+            {/* <motion.img
               src={logoUrl}
               alt={companyName}
               draggable={false}
@@ -58,10 +64,10 @@ export default function SplashOverlay({
               transition={{ duration: 0.22 }}
               className="w-[140px] h-auto select-none"
               style={{ imageRendering: 'pixelated' }}
-            />
+            /> */}
 
             {/* Text */}
-            <div className="text-white/80 tracking-[0.24em] text-xs">{companyName}</div>
+            {/* <div className="text-white/80 tracking-[0.24em] text-xs">{companyName}</div> */}
 
             {/* tiny loader */}
             <div className="mt-2 h-[2px] w-[160px] overflow-hidden bg-white/10 rounded">

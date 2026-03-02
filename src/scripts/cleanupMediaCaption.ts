@@ -37,7 +37,6 @@ async function run() {
     }
   }
 
-  console.log(`Done. Updated ${updated} media item(s).`)
   process.exit(0)
 }
 

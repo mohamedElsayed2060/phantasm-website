@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 
-export default function useSplashRouter(defaultMinMs = 350) {
+export default function useSplashRouter(defaultMinMs = 750) {
   const router = useRouter()
 
   const push = (href, opts = {}) => {

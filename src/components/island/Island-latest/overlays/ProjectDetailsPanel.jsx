@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import PixelFrameOverlay from '@/components/ui/PixelFrameOverlay'
 import PixelScrollTrack from '@/components/island/Island-latest/overlays/components/PixelScrollTrack'
@@ -15,9 +14,7 @@ export default function ProjectDetailsPanel({
   onClose,
   width,
 }) {
-  console.log(project)
-
-  const splashRouter = useSplashRouter(350)
+  const splashRouter = useSplashRouter(750)
   if (!open || !project) return null
 
   const isMobileSheet = placement === 'top' // عندكم الموبايل بيرسل top
@@ -35,7 +32,7 @@ export default function ProjectDetailsPanel({
   const go = () => {
     const slug = project?.slug || project?.id
     if (!slug) return
-    window.dispatchEvent(new CustomEvent('phantasm:splashStart', { detail: { minMs: 350 } }))
+    window.dispatchEvent(new CustomEvent('phantasm:splashStart', { detail: { minMs: 750 } }))
     splashRouter.push(`/project-details/${slug}`)
   }
 

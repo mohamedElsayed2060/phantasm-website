@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PixelFrameOverlay from '@/components/ui/PixelFrameOverlay'
 import PixelScrollTrack from '@/components/island/Island-latest/overlays/components/PixelScrollTrack'
 import PixelDivider from '@/components/island/Island-latest/overlays/components/PixelDivider'
@@ -12,12 +12,6 @@ function SectionHeading({ children }) {
     <div className="text-white text-[15px] tracking-[0.18em] uppercase mb-1 font-semibold">
       {children}
     </div>
-  )
-}
-
-function SmallLabel({ children }) {
-  return (
-    <div className="text-white/80 text-[11px] tracking-[0.14em] uppercase mb-1">{children}</div>
   )
 }
 
@@ -35,9 +29,7 @@ function ActionButton({ href, disabled, children }) {
   const cls = disabled
     ? `${common} bg-white/10 text-white/35 cursor-not-allowed`
     : `${common} bg-[#7a1010] hover:bg-[#8a1414] text-white cursor-pointer`
-
   if (disabled) return <div className={cls}>{children}</div>
-
   return (
     <a
       className={cls}
@@ -55,41 +47,45 @@ function ActionButton({ href, disabled, children }) {
 }
 
 function StoreBadge({ imgSrc, url, disabled, alt }) {
-  const wrapCls = disabled ? 'opacity-40 cursor-not-allowed' : 'opacity-100 cursor-pointer'
   return (
     <a
       href={disabled ? undefined : url || undefined}
       target={disabled ? undefined : '_blank'}
       rel={disabled ? undefined : 'noreferrer'}
-      className={`inline-flex ${wrapCls}`}
+      className={`inline-flex ${disabled ? 'opacity-40 cursor-not-allowed' : 'opacity-100 cursor-pointer'}`}
       onClick={(e) => {
         if (disabled || !url) e.preventDefault()
       }}
       aria-disabled={disabled ? 'true' : 'false'}
     >
-      {/* الصورة كزرار */}
       {imgSrc ? (
         <img
           src={imgSrc}
           alt={alt || ''}
           className="h-[38px] sm:h-[42px] w-auto select-none rounded"
           draggable={false}
+          decoding="async"
+          loading="eager"
         />
       ) : null}
     </a>
   )
 }
 
-export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeightPx }) {
+// innerScrollRef = ref من MobileDetailsSheet عشان يعرف الـ scrollTop
+export default function ProjectDetailsScrollPanel({
+  project,
+  maxHeight,
+  maxHeightPx,
+  innerScrollRef,
+}) {
   const title = project?.projectName || ''
   const sub = project?.subTitle || ''
   const client = project?.client || ''
   const typeText = project?.type?.text || ''
   const achievement = project?.achievement || ''
   const comingSoon = Boolean(project?.comingSoon)
-
-  const categoryTitle = typeof project?.category === 'object' ? project?.category?.title || '' : '' // لو جالك id بس مش object هتفضل فاضية
-
+  const categoryTitle = typeof project?.category === 'object' ? project?.category?.title || '' : ''
   const coverage = project?.coverage || null
   const desc = project?.descriptions || null
   const challenge = project?.challenge || null
@@ -98,7 +94,6 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
   const typeIcon2 = project?.type?.icon?.icon2 ? imgUrl(project.type.icon.icon2) : null
   const typeIcon3 = project?.type?.icon?.icon3 ? imgUrl(project.type.icon.icon3) : null
 
-  // technologies
   const technologies = Array.isArray(project?.technologies) ? project.technologies : []
   const techItems = useMemo(() => {
     return technologies
@@ -111,7 +106,6 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
       .filter(Boolean)
   }, [technologies])
 
-  // urls
   const url = String(project?.url || '').trim()
   const urlGroup = Array.isArray(project?.urlGroup) ? project.urlGroup : []
   const urlButtons = useMemo(() => {
@@ -125,38 +119,48 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
       .filter(Boolean)
   }, [urlGroup])
 
-  // store urls
   const gpImg = project?.googlePlayUrl?.img ? imgUrl(project.googlePlayUrl.img) : ''
   const gpUrl = String(project?.googlePlayUrl?.url || '').trim()
-
   const asImg = project?.appStoreUrl?.img ? imgUrl(project.appStoreUrl.img) : ''
   const asUrl = String(project?.appStoreUrl?.url || '').trim()
 
-  // scroll plumbing
-  const scrollRef = useRef(null)
-  const [scrollState, setScrollState] = useState({
-    scrollTop: 0,
-    scrollHeight: 0,
-    clientHeight: 0,
-  })
+  // scroll ref - محلي + بنمرره للـ parent لو طلبه
+  const localRef = useRef(null)
+  const setScrollRef = useCallback(
+    (el) => {
+      localRef.current = el
+      if (innerScrollRef) innerScrollRef.current = el
+    },
+    [innerScrollRef],
+  )
+  useEffect(() => {
+    const urls = [typeIcon1, typeIcon2, typeIcon3, gpImg, asImg].filter(
+      (u) => typeof u === 'string' && u.trim().length > 0,
+    )
+
+    if (!urls.length) return
+
+    urls.forEach((u) => {
+      const img = new Image()
+      img.src = u
+      img.decode?.().catch(() => {})
+    })
+  }, [typeIcon1, typeIcon2, typeIcon3, gpImg, asImg])
+  const [scrollState, setScrollState] = useState({ scrollTop: 0, scrollHeight: 0, clientHeight: 0 })
 
   useLayoutEffect(() => {
-    const el = scrollRef.current
+    const el = localRef.current
     if (!el) return
-
-    const update = () => {
+    const update = () =>
       setScrollState({
         scrollTop: el.scrollTop,
         scrollHeight: el.scrollHeight,
         clientHeight: el.clientHeight,
       })
-    }
-
     update()
     el.addEventListener('scroll', update, { passive: true })
     const ro = new ResizeObserver(update)
     ro.observe(el)
-
     return () => {
       el.removeEventListener('scroll', update)
       ro.disconnect()
@@ -164,9 +168,8 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
   }, [project?.id])
 
   const needsScroll = scrollState.scrollHeight > scrollState.clientHeight + 1
-
-  const handleScrollTo = (newScrollTop) => {
-    if (scrollRef.current) scrollRef.current.scrollTop = newScrollTop
+  const handleScrollTo = (v) => {
+    if (localRef.current) localRef.current.scrollTop = v
   }
 
   const heightStyle =
@@ -204,12 +207,10 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
               className="mb-2 w-full overflow-hidden"
               roundedClassName="rounded"
             >
-              <div className="px-3 py-3 text-[13px] tracking-[0.22em] font-bold uppercase text-white">
+              <div className="px-3 py-3 text-[14px] md:text-[18px] tracking-[0.12em] font-semibold uppercase text-white">
                 {title}
               </div>
             </PixelFrameOverlay>
-
-            {/* ✅ Category under title */}
             {categoryTitle ? (
               <div className="mt-1 mb-2">
                 <Pill>{categoryTitle}</Pill>
@@ -219,9 +220,9 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
 
           {/* Body */}
           <div className="flex items-start gap-[8px] px-2 pb-3 flex-1 min-h-0 overflow-hidden">
-            {/* Scrollable column */}
+            {/* Scroll area */}
             <div
-              ref={scrollRef}
+              ref={setScrollRef}
               className="min-w-0 flex-1 min-h-0 h-full px-2"
               style={{
                 overflowY: 'auto',
@@ -234,9 +235,7 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
               }}
             >
               <style>{`.pd-right::-webkit-scrollbar{display:none}`}</style>
-
               <div className="pd-right overflow-hidden">
-                {/* subtitle */}
                 {sub ? (
                   <div className="text-white text-[12px] tracking-[0.18em] uppercase mb-3">
                     {sub}
@@ -245,50 +244,66 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
 
                 <PixelDivider align="start" color="#5C3131" height={2} className="my-3" />
 
-                {/* meta */}
                 {client || typeText || achievement ? (
                   <div className="text-white text-[12px] tracking-[0.14em] uppercase space-y-2">
                     {client ? (
                       <div>
-                        <span className="text-lg">CLIENT: </span> {client}
+                        <span className="text-lg">CLIENT: </span>
+                        {client}
                       </div>
                     ) : null}
-
                     {typeText ? (
                       <div className="flex items-center gap-2 flex-wrap">
                         <span>
                           <span className="text-lg">TYPE:</span> {typeText}
                         </span>
                         {typeIcon1 ? (
-                          <img src={typeIcon1} alt="" className=" w-4" draggable={false} />
+                          <img
+                            src={typeIcon1}
+                            alt=""
+                            className="w-4"
+                            draggable={false}
+                            decoding="async"
+                            loading="eager"
+                          />
                         ) : null}
                         {typeIcon2 ? (
-                          <img src={typeIcon2} alt="" className=" w-4" draggable={false} />
+                          <img
+                            src={typeIcon2}
+                            alt=""
+                            className="w-4"
+                            draggable={false}
+                            decoding="async"
+                            loading="eager"
+                          />
                         ) : null}
                         {typeIcon3 ? (
-                          <img src={typeIcon3} alt="" className="w-4" draggable={false} />
+                          <img
+                            src={typeIcon3}
+                            alt=""
+                            className="w-4"
+                            draggable={false}
+                            decoding="async"
+                            loading="eager"
+                          />
                         ) : null}
                       </div>
                     ) : null}
-
                     {achievement ? <div>ACHIEVEMENT: {achievement}</div> : null}
                   </div>
                 ) : null}
-                {/* ✅ Project Description */}
-                {desc || true ? (
-                  <div className="mt-5">
-                    <SectionHeading>DESCRIPTION:</SectionHeading>
-                    {desc ? (
-                      <div className="text-white text-[12px] leading-[1.8] tracking-[0.12em] uppercase overflow-hidden break-words [&_img]:max-w-full [&_img]:h-auto [&_iframe]:max-w-full">
-                        <LexicalRich data={desc} />
-                      </div>
-                    ) : (
-                      <div className="text-white/50 text-[12px]">—</div>
-                    )}
-                  </div>
-                ) : null}
 
-                {/* ✅ Challenge */}
+                <div className="mt-5">
+                  <SectionHeading>DESCRIPTION:</SectionHeading>
+                  {desc ? (
+                    <div className="text-white text-[12px] leading-[1.8] tracking-[0.12em] uppercase overflow-hidden break-words [&_img]:max-w-full [&_img]:h-auto [&_iframe]:max-w-full">
+                      <LexicalRich data={desc} />
+                    </div>
+                  ) : (
+                    <div className="text-white/50 text-[12px]">—</div>
+                  )}
+                </div>
+
                 {challenge ? (
                   <div className="mt-5">
                     <PixelFrameOverlay
@@ -308,21 +323,18 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
                   </div>
                 ) : null}
 
-                {/* ✅ Coverage */}
                 {coverage ? (
                   <div className="mt-5">
                     <SectionHeading>COVERAGE:</SectionHeading>
-
                     <div className="text-white text-[11px] leading-[1.7] tracking-[0.12em] uppercase overflow-hidden break-words [&_img]:max-w-full [&_img]:h-auto [&_iframe]:max-w-full">
                       <LexicalRich data={coverage} />
                     </div>
                   </div>
                 ) : null}
-                {/* ✅ Technologies */}
+
                 {techItems.length ? (
                   <div className="mt-5">
                     <SectionHeading>TECHNOLOGIES</SectionHeading>
-
                     <div className="flex flex-wrap gap-3">
                       {techItems.map((t) => (
                         <div
@@ -335,15 +347,14 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
                                 src={t.src}
                                 alt={t.name || ''}
                                 draggable={false}
-                                className={`select-none object-contain ${
-                                  t.semiLarge ? 'h-[34px] sm:h-[40px]' : 'h-[30px] sm:h-[36px]'
-                                } w-auto`}
+                                decoding="async"
+                                loading="lazy"
+                                className={`select-none object-contain ${t.semiLarge ? 'h-[34px] sm:h-[40px]' : 'h-[30px] sm:h-[36px]'} w-auto`}
                               />
                             </div>
                           ) : (
                             <div className="h-[30px]" />
                           )}
-
                           {t.name ? (
                             <div className="mt-1 text-white/85 text-[10px] tracking-[0.12em] uppercase leading-tight">
                               {t.name}
@@ -355,16 +366,11 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
                   </div>
                 ) : null}
 
-                {/* ✅ Website buttons */}
                 {url || urlButtons.length ? (
                   <div className="mt-5">
                     <SectionHeading>LINKS</SectionHeading>
-
                     <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-                      {/* لو url الواحد راجع */}
                       {url ? <ActionButton href={url}>VISIT WEBSITE</ActionButton> : null}
-
-                      {/* لو urlGroup راجع */}
                       {urlButtons.map((b, idx) => (
                         <ActionButton key={`${b.href}-${idx}`} href={b.href}>
                           {b.text}
@@ -374,7 +380,6 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
                   </div>
                 ) : null}
 
-                {/* ✅ Stores */}
                 {gpImg || asImg || gpUrl || asUrl ? (
                   <div className="mt-5 mb-2">
                     <div className="flex items-center justify-between gap-3">
@@ -385,7 +390,6 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
                         </div>
                       ) : null}
                     </div>
-
                     <div className="flex items-center gap-3 flex-wrap">
                       {gpImg ? (
                         <StoreBadge
@@ -395,7 +399,6 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
                           alt="Google Play"
                         />
                       ) : null}
-
                       {asImg ? (
                         <StoreBadge
                           imgSrc={asImg}
@@ -410,7 +413,6 @@ export default function ProjectDetailsScrollPanel({ project, maxHeight, maxHeigh
               </div>
             </div>
 
-            {/* pixel track */}
             {needsScroll ? (
               <PixelScrollTrack
                 scrollTop={scrollState.scrollTop}

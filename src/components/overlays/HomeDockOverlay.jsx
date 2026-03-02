@@ -18,7 +18,7 @@ function isHomePath(pathname = '') {
 
 export default function HomeDockOverlay({ config, allowOpen = true }) {
   const pathname = usePathname()
-  const splashRouter = useSplashRouter(350)
+  const splashRouter = useSplashRouter(750)
 
   // ✅ احسب شروط الرندر بدري (من غير ما نعمل return بدري)
   const enabled = config?.enabled !== false
@@ -43,6 +43,35 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
   const [phase, setPhase] = useState('closed') // closed | spawning | open
   const [screenKey, setScreenKey] = useState('grid') // grid | message/locations/phones
   const timerRef = useRef(null)
+
+  useEffect(() => {
+    const urls = [
+      '/open-mobile-icon.png',
+      '/close.png',
+      '/back-icon.png',
+      '/location-single-icon.png',
+    ]
+    urls.forEach((u) => {
+      const img = new Image()
+      img.src = u
+    })
+  }, [])
+  useEffect(() => {
+    const urls = [openGifSrc, staticPhoneSrc].filter(Boolean)
+    urls.forEach((u) => {
+      const img = new Image()
+      img.src = u
+      img.decode?.().catch(() => {})
+    })
+  }, [openGifSrc, staticPhoneSrc])
+  useEffect(() => {
+    if (!shouldRender) return
+    const urls = itemsAll.map((it) => (it?.icon ? imgUrl(it.icon) : null)).filter(Boolean)
+    urls.forEach((u) => {
+      const img = new Image()
+      img.src = u
+    })
+  }, [shouldRender, itemsAll])
   useEffect(() => {
     const locked = phase !== 'closed'
     try {
@@ -115,7 +144,13 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                      flex items-center justify-center hover:bg-[#2A1616] transition"
           aria-label="Open dock"
         >
-          <img className="w-full h-full" src="/open-mobile-icon.png" alt="open-mobile" />
+          <img
+            className="w-full h-full"
+            src="/open-mobile-icon.png"
+            alt="open-mobile"
+            decoding="async"
+            loading="eager"
+          />{' '}
         </button>
       )}
 
@@ -133,15 +168,19 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
             {/* phone container */}
             <div className="absolute left-6 bottom-6" onClick={(e) => e.stopPropagation()}>
               {/* close X */}
-              <button
-                type="button"
-                onClick={close}
-                className="absolute -top-1 -right-1 z-10 h-8 w-8"
-                aria-label="Close dock"
-              >
-                {/* <span className="text-white text-xs leading-none">×</span> */}
-                <img src="/close.png" alt="close" />
-              </button>
+              {phase === 'open' && (
+                <motion.button
+                  type="button"
+                  onClick={close}
+                  className="absolute -top-1 -right-1 z-10 h-8 w-8"
+                  aria-label="Close dock"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <img src="/close.png" alt="close" decoding="async" loading="eager" />
+                </motion.button>
+              )}
 
               {/* spawning gif */}
               {phase === 'spawning' && openGifSrc ? (
@@ -150,6 +189,9 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                   alt="Opening"
                   draggable={false}
                   className="block w-[250px] md:w-[280px] h-auto select-none"
+                  decoding="async"
+                  loading="eager"
+                  fetchPriority="high"
                   style={{ imageRendering: 'pixelated' }}
                 />
               ) : null}
@@ -162,6 +204,9 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                     alt="Dock"
                     draggable={false}
                     className="block w-[250px] md:w-[280px] h-auto select-none"
+                    decoding="async"
+                    loading="eager"
+                    fetchPriority="high"
                     style={{ imageRendering: 'pixelated' }}
                   />
 
@@ -228,7 +273,13 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                               onClick={() => setScreenKey('grid')}
                             >
                               {/* <BackSvgIcon /> */}
-                              <img className="w-7" src="/back-icon.png" alt="back-icon" />
+                              <img
+                                className="w-7"
+                                src="/back-icon.png"
+                                alt="back-icon"
+                                decoding="async"
+                                loading="eager"
+                              />{' '}
                             </button>
 
                             <div className="flex flex-col items-center gap-1 ">
@@ -238,6 +289,8 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                                   alt={activeScreen?.title || ''}
                                   className="h-7 w-7"
                                   draggable={false}
+                                  decoding="async"
+                                  loading="eager"
                                   style={{ imageRendering: 'pixelated' }}
                                 />
                               ) : null}
@@ -312,6 +365,8 @@ function DockIconButton({ item, idx, animateIcons, staggerMs, onClick }) {
             alt={label}
             className="h-full w-full"
             draggable={false}
+            decoding="async"
+            loading="eager"
             style={{ imageRendering: 'pixelated' }}
           />
         ) : (
@@ -526,6 +581,8 @@ function LocationsScreen({ locations = [] }) {
                             className="w-10 mt-1"
                             src="/location-single-icon.png"
                             alt="location"
+                            decoding="async"
+                            loading="eager"
                           />
                         </div>
                         <div className="mt-1 text-white/85 text-[12px] sm:text-[14px] leading-relaxed whitespace-pre-line">

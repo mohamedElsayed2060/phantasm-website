@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import SplashOverlay from './SplashOverlay'
 
 export default function SplashRouteTransitionClient({
-  defaultMinMs = 750, // ✅ زوّدها براحتك
+  defaultMinMs = 1850, // ✅ زوّدها براحتك
   holdAfterReadyMs = 300, // ✅ “زيادة صغيرة” بعد ما الداتا/الروت جاهز
   logoUrl = 'logo.gif',
   companyName = 'PHANTASM',
@@ -103,5 +103,12 @@ export default function SplashRouteTransitionClient({
 
   useEffect(() => () => clearClose(), [])
 
-  return <SplashOverlay open={open} minMs={minMs} logoUrl={logoUrl} companyName={companyName} />
+  return (
+    <SplashOverlay
+      open={open}
+      minMs={minMs}
+      // logoUrl={logoUrl}
+      // companyName={companyName}
+    />
+  )
 }

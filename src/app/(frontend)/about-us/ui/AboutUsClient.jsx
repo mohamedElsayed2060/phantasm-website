@@ -7,7 +7,7 @@ import { imgUrl } from '@/lib/cms'
 
 import { Splide, SplideSlide } from '@splidejs/react-splide'
 import '@splidejs/react-splide/css'
-
+import PremiumImage from '@/components/ui/PremiumImage'
 function useTypewriter(text, { speed = 14 } = {}) {
   const [out, setOut] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -98,7 +98,30 @@ export default function AboutUsClient({ data }) {
     imgUrl(selectedMember?.avatarStatic) ||
     imgUrl(selectedMember?.avatarAnimated) ||
     null
+  useEffect(() => {
+    // ✅ preload selected member images to avoid swap delay
+    const urls = [
+      imgUrl(selectedMember?.realPhoto),
+      imgUrl(selectedMember?.avatarStatic),
+      imgUrl(selectedMember?.avatarAnimated),
+    ].filter(Boolean)
 
+    urls.forEach((u) => {
+      const img = new Image()
+      img.src = u
+      img.decode?.().catch(() => {})
+    })
+  }, [selectedMember?.key])
+
+  useEffect(() => {
+    // ✅ preload team static avatars (cheap) for instant slider render
+    members.forEach((m) => {
+      const u = imgUrl(m?.avatarStatic)
+      if (!u) return
+      const img = new Image()
+      img.src = u
+    })
+  }, [members])
   return (
     <div
       ref={pageRef}
@@ -111,13 +134,18 @@ export default function AboutUsClient({ data }) {
         <div className="mb-4">
           <SplashLink href={backHref} className="inline-block">
             {backImg ? (
-              <img
-                src={backImg}
-                alt="Back"
-                draggable={false}
-                className="h-auto w-[40px] md:w-[44px]"
-                style={{ imageRendering: 'pixelated' }}
-              />
+              <div className="w-[40px] md:w-[44px]">
+                <PremiumImage
+                  src={backImg}
+                  alt="Back"
+                  ratio="1/1"
+                  contain
+                  priority
+                  skeleton={false}
+                  imgClassName=""
+                  className=""
+                />
+              </div>
             ) : (
               <div className="text-xs opacity-70">Back</div>
             )}
@@ -259,12 +287,15 @@ export default function AboutUsClient({ data }) {
                         {/* ✅ Center the image + show all of it */}
                         <div className="w-full h-full flex items-center justify-center overflow-hidden">
                           {detailsImg ? (
-                            <img
+                            <PremiumImage
                               src={detailsImg}
                               alt={selectedMember?.name || 'Member'}
-                              draggable={false}
-                              className="max-w-full max-h-full object-contain"
-                              style={{ imageRendering: 'pixelated' }}
+                              ratio="1/1"
+                              contain
+                              priority
+                              skeleton
+                              imgClassName="max-w-full max-h-full"
+                              className="w-full h-full"
                             />
                           ) : (
                             <div className="text-xs opacity-70">No Image</div>

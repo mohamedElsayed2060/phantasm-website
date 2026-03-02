@@ -17,7 +17,7 @@ import HotspotsLayer from './layers/HotspotsLayer'
 import BuildingsLayer from './layers/BuildingsLayer'
 import ProjectsOverlay from './overlays/ProjectsOverlay'
 import IslandBootDock from './overlays/IslandBootDock'
-
+import { preloadImage, preloadMany } from './preloadImage'
 const SHOW_DEV = process.env.NEXT_PUBLIC_ISLAND_DEV === '1'
 
 function toAbsoluteUrl(maybeRelative) {
@@ -360,7 +360,14 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     },
     [clampToBounds, coverScale, view.w, view.h, map.w, map.h],
   )
-
+  const FRAME_ASSETS = [
+    '/frames/title-fram.png',
+    '/frames/CardFrame.png',
+    '/frames/imgFrame.png',
+    '/frames/titleFrame.png',
+    '/frames/dock-frame.png',
+    '/frames/botton-frame.png',
+  ]
   // ====== init once ======
   const didInit = useRef(false)
   useEffect(() => {
@@ -397,7 +404,16 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
       window.dispatchEvent(new CustomEvent('phantasm:bootReady'))
     } catch {}
 
-    setSceneReady(true)
+    const discoveredLoops = HOTSPOTS.filter((h) => discoveredIds.has(String(h.id)))
+      .map((h) => h.buildingLoopSrc)
+      .filter(Boolean)
+
+    const hotspotIcons = HOTSPOTS.map((h) => h.hotspotIdleSrc).filter(Boolean)
+    preloadMany([...FRAME_ASSETS, backgroundSrc, ...hotspotIcons, ...discoveredLoops]).finally(
+      () => {
+        setSceneReady(true)
+      },
+    )
   }, [cmsReady, map.ready, view.w, view.h, reset])
   const blockCanvasInput = Boolean(overlay)
 
@@ -475,7 +491,8 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
         next.add(sid)
         return next
       })
-
+      preloadImage(spot.buildingSpawnSrc)
+      preloadImage(spot.buildingLoopSrc)
       // spawn building now
       setSpawningId(sid)
       setOpenProjectsFor(null)
@@ -483,13 +500,12 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
       if (spawnTimerRef.current) window.clearTimeout(spawnTimerRef.current)
       const ms = Number(spot.spawnDurationMs || 1700)
       spawnTimerRef.current = window.setTimeout(() => {
-        setSpawningId((curr) => (String(curr) === sid ? null : curr))
-
-        // ✅ افتح الليست
-        setOpenProjectsFor(sid)
-
-        // ✅ NEW: افتح Building Dialog مع الليست (أول مرة بعد الهوتسبوت)
-        setDialogOpen(true)
+        // ✅ اتأكد إن loop جاهز قبل ما نبدّل من spawn → built
+        preloadImage(spot.buildingLoopSrc).then(() => {
+          setSpawningId((curr) => (String(curr) === sid ? null : curr))
+          setOpenProjectsFor(sid)
+          setDialogOpen(true)
+        })
       }, ms)
     },
     [discoveredIds, focusSpot],
@@ -583,6 +599,8 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
                   src={backgroundSrc}
                   alt="Island Map"
                   draggable={false}
+                  decoding="async"
+                  fetchPriority="high"
                   style={{
                     width: '100%',
                     height: '100%',

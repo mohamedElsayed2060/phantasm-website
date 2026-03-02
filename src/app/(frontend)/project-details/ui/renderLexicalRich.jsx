@@ -94,7 +94,8 @@ function renderNode(node, key, ctx) {
     }
 
     case 'link': {
-      const href = node.url || node.href || '#'
+      const href = node?.fields?.url || node?.fields?.href || '#'
+
       return (
         <a
           key={key}

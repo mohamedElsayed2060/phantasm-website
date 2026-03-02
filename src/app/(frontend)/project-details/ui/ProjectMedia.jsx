@@ -1,8 +1,10 @@
 'use client'
 
+import { useEffect } from 'react'
 import { Splide, SplideSlide } from '@splidejs/react-splide'
 import '@splidejs/react-splide/css'
 import { imgUrl } from '@/lib/cms'
+import PremiumImage from '@/components/ui/PremiumImage'
 
 export default function ProjectMedia({ project }) {
   const single = project?.singleImage ? imgUrl(project.singleImage) : null
@@ -12,6 +14,15 @@ export default function ProjectMedia({ project }) {
     : []
 
   const useCarousel = carouselImgs.length > 0
+
+  // ✅ preload first media for instant first paint
+  useEffect(() => {
+    const first = useCarousel ? carouselImgs[0] : single
+    if (!first) return
+    const img = new Image()
+    img.src = first
+    img.decode?.().catch(() => {})
+  }, [useCarousel, carouselImgs, single])
 
   return (
     <div className="w-full h-full flex items-center justify-center bg-white">
@@ -29,23 +40,30 @@ export default function ProjectMedia({ project }) {
           >
             {carouselImgs.map((src, idx) => (
               <SplideSlide key={idx}>
-                <img
+                <PremiumImage
                   src={src}
                   alt={project?.projectName || 'Project'}
-                  className="w-full max-h-[520px] object-contain drop-shadow-xl select-none"
-                  draggable={false}
+                  ratio="16/10"
+                  contain
+                  priority={idx === 0}
+                  className="drop-shadow-xl"
                 />
               </SplideSlide>
             ))}
           </Splide>
         </div>
       ) : single ? (
-        <img
-          src={single}
-          alt={project?.projectName || 'Project'}
-          className="w-full max-w-[560px] max-h-[520px] object-contain drop-shadow-xl select-none"
-          draggable={false}
-        />
+        <div className="w-full max-w-[560px] px-6">
+          <PremiumImage
+            src={single}
+            alt={project?.projectName || 'Project'}
+            ratio="16/10"
+            maxH={520}
+            contain
+            priority
+            className="drop-shadow-xl"
+          />
+        </div>
       ) : (
         <div className="text-black/50">No media</div>
       )}

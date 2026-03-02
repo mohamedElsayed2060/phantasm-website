@@ -43,13 +43,9 @@ async function run() {
     const hits = scanObject(doc)
     if (hits.length) {
       found++
-      console.log('---')
-      console.log('Project:', doc.id, doc.projectName || doc.title)
-      console.log('Slate-like fields:', hits)
     }
   }
 
-  console.log(`Scan done. Docs with Slate-like data: ${found}/${res.docs.length}`)
   process.exit(0)
 }
 

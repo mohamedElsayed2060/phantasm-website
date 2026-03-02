@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import PixelFrameOverlay from '@/components/ui/PixelFrameOverlay'
-
+import PremiumImage from '@/components/ui/PremiumImage'
 const LS_PLAYER = 'phantasm:player'
 
 export default function AvatarGate({ config, allowOpen = true }) {
@@ -32,6 +32,16 @@ export default function AvatarGate({ config, allowOpen = true }) {
       )
     } catch {}
   }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const urls = players.map((p) => p?.avatarImage?.url).filter(Boolean)
+    urls.forEach((u) => {
+      const img = new Image()
+      img.src = u
+      img.decode?.().catch(() => {})
+    })
+  }, [isOpen, players])
   const pick = (p) => {
     const payload = {
       id: p.id,

@@ -88,7 +88,7 @@ export default function ProjectsPopover({
       >
         {/* ✅ Header */}
         {showHeader ? (
-          <div className="px-2 pt-2" style={{ backgroundColor: '#2A1616' }}>
+          <div className="px-2 pt-3" style={{ backgroundColor: '#2A1616' }}>
             <PixelFrameOverlay
               frameSrc="/frames/title-fram.png"
               slice={12}

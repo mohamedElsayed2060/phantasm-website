@@ -29,7 +29,7 @@ export default function ProjectDetailsClient({ project }) {
           <div className="relative bg-white h-full">
             {/* back button inside left */}
             <div className="absolute top-4 left-4 z-20">
-              <SplashLink href={backHref} minMs={350} className="inline-block">
+              <SplashLink href={backHref} className="inline-block">
                 <img src="/back-icon.png" alt="Back" className="w-9 h-9" />
               </SplashLink>
             </div>
@@ -53,7 +53,7 @@ export default function ProjectDetailsClient({ project }) {
         </div>
 
         <div className="absolute top-3 left-3 z-[95]">
-          <SplashLink href={backHref} minMs={350} className="inline-block">
+          <SplashLink href={backHref} className="inline-block">
             <img src="/back-icon.png" alt="Back" className="w-9 h-9" />
           </SplashLink>
         </div>
