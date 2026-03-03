@@ -32,12 +32,52 @@ export const SceneHotspots: CollectionConfig = {
     },
 
     // ✅ position as percent
-    { name: 'x', type: 'number', required: true, min: 0, max: 100 },
-    { name: 'y', type: 'number', required: true, min: 0, max: 100 },
+    // ✅ position as percent
+    {
+      name: 'x',
+      type: 'number',
+      required: true,
+      min: 0,
+      max: 100,
+      admin: {
+        description:
+          'Horizontal position on the island map (0–100). 0 = far LEFT, 100 = far RIGHT.',
+      },
+    },
+    {
+      name: 'y',
+      type: 'number',
+      required: true,
+      min: 0,
+      max: 100,
+      admin: {
+        description: 'Vertical position on the island map (0–100). 0 = TOP, 100 = BOTTOM.',
+      },
+    },
 
-    // ✅ building anchor (نفس اللي شغال عندك)
-    { name: 'anchorX', type: 'number', defaultValue: 0.5, min: 0, max: 1 },
-    { name: 'anchorY', type: 'number', defaultValue: 0.9, min: 0, max: 1 },
+    // ✅ building anchor
+    {
+      name: 'anchorX',
+      type: 'number',
+      defaultValue: 0.5,
+      min: 0,
+      max: 1,
+      admin: {
+        description:
+          'Where to “attach” the building image horizontally. 0 = attach from LEFT edge, 0.5 = CENTER, 1 = RIGHT edge. Example: 0.5 means the map point is the middle of the image.',
+      },
+    },
+    {
+      name: 'anchorY',
+      type: 'number',
+      defaultValue: 0.9,
+      min: 0,
+      max: 1,
+      admin: {
+        description:
+          'Where to “attach” the building image vertically. 0 = attach from TOP edge, 0.5 = CENTER, 1 = BOTTOM edge. Example: anchorX=0.5 and anchorY=1 means the map point is the BOTTOM-CENTER of the building (best for “sitting on the ground”).',
+      },
+    },
 
     // ✅ optional bounding box (يساعد في placement)
     { name: 'buildingW', type: 'number', defaultValue: 240 },

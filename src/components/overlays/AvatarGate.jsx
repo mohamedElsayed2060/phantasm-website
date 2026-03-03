@@ -120,7 +120,7 @@ export default function AvatarGate({ config, allowOpen = true }) {
                 </motion.div>
 
                 {/* ── Cards grid ── */}
-                <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4  gap-0 md:px-5 px-1">
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-stretch gap-0 md:px-5 px-1">
                   {players.map((p, idx) => {
                     const img = p.avatarImage?.url
                     const label = p.badgeLabel || p.name || 'PLAYER'
@@ -146,7 +146,7 @@ export default function AvatarGate({ config, allowOpen = true }) {
                         //   transition: { type: 'spring', stiffness: 200, damping: 28 },
                         // }}
                         className="origin-center rounded-md bg-[#2A1616] text-left cursor-pointer
-                          focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                          focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 h-full"
                         style={{ transformOrigin: '50% 50%' }}
                       >
                         <PixelFrameOverlay
@@ -154,7 +154,7 @@ export default function AvatarGate({ config, allowOpen = true }) {
                           slice={9}
                           bw={9}
                           pad={5}
-                          className="flex items-start md:inline-block "
+                          className="flex items-start md:inline-block h-full"
                         >
                           {/* image */}
 
@@ -163,7 +163,7 @@ export default function AvatarGate({ config, allowOpen = true }) {
                             slice={9}
                             bw={9}
                             pad={5}
-                            className="my-[3px] sm:mt-[4px] mx-[4px] md:w-auto w-[500px]"
+                            className="my-[3px] sm:mt-[4px] mx-[4px] md:w-auto w-[130px] shrink-0"
                           >
                             <div
                               className="h-[150px] sm:h-[190px] flex items-center justify-center

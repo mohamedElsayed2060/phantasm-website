@@ -48,7 +48,7 @@ export default function HotspotsLayer({
 
         const pxX = percentToPxX(spot.x, map.w)
         const pxY = percentToPxY(spot.y, map.h)
-        const size = Number(spot.hotspotSize || 64)
+        const size = Number(spot.hotspotSize || 25)
 
         const trigger = spot?.trigger || 'click'
         const allowHover = trigger === 'hover' && !isCoarsePointer

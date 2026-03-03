@@ -282,9 +282,21 @@ export interface SceneHotspot {
    */
   trigger?: ('click' | 'hover') | null;
   name: string;
+  /**
+   * Horizontal position on the island map (0–100). 0 = far LEFT, 100 = far RIGHT.
+   */
   x: number;
+  /**
+   * Vertical position on the island map (0–100). 0 = TOP, 100 = BOTTOM.
+   */
   y: number;
+  /**
+   * Where to “attach” the building image horizontally. 0 = attach from LEFT edge, 0.5 = CENTER, 1 = RIGHT edge. Example: 0.5 means the map point is the middle of the image.
+   */
   anchorX?: number | null;
+  /**
+   * Where to “attach” the building image vertically. 0 = attach from TOP edge, 0.5 = CENTER, 1 = BOTTOM edge. Example: anchorX=0.5 and anchorY=1 means the map point is the BOTTOM-CENTER of the building (best for “sitting on the ground”).
+   */
   anchorY?: number | null;
   buildingW?: number | null;
   buildingH?: number | null;
@@ -903,6 +915,52 @@ export interface IslandScene {
   id: string;
   background?: (string | null) | Media;
   maxZoomMult?: number | null;
+  decorations?:
+    | {
+        enabled?: boolean | null;
+        name: string;
+        order?: number | null;
+        image: string | Media;
+        x: number;
+        y: number;
+        w: number;
+        h: number;
+        anchorX?: number | null;
+        anchorY?: number | null;
+        opacity?: number | null;
+        rotate?: number | null;
+        flipX?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  ambient?:
+    | {
+        enabled?: boolean | null;
+        name: string;
+        order?: number | null;
+        type: 'cloud' | 'birds';
+        image: string | Media;
+        startX: number;
+        startY: number;
+        endX: number;
+        endY: number;
+        w: number;
+        h: number;
+        anchorX?: number | null;
+        anchorY?: number | null;
+        durationMs?: number | null;
+        delayMs?: number | null;
+        loop?: boolean | null;
+        count?: number | null;
+        spreadX?: number | null;
+        spreadY?: number | null;
+        staggerMs?: number | null;
+        opacity?: number | null;
+        rotate?: number | null;
+        flipX?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1050,6 +1108,52 @@ export interface IslandBootDockSelect<T extends boolean = true> {
 export interface IslandSceneSelect<T extends boolean = true> {
   background?: T;
   maxZoomMult?: T;
+  decorations?:
+    | T
+    | {
+        enabled?: T;
+        name?: T;
+        order?: T;
+        image?: T;
+        x?: T;
+        y?: T;
+        w?: T;
+        h?: T;
+        anchorX?: T;
+        anchorY?: T;
+        opacity?: T;
+        rotate?: T;
+        flipX?: T;
+        id?: T;
+      };
+  ambient?:
+    | T
+    | {
+        enabled?: T;
+        name?: T;
+        order?: T;
+        type?: T;
+        image?: T;
+        startX?: T;
+        startY?: T;
+        endX?: T;
+        endY?: T;
+        w?: T;
+        h?: T;
+        anchorX?: T;
+        anchorY?: T;
+        durationMs?: T;
+        delayMs?: T;
+        loop?: T;
+        count?: T;
+        spreadX?: T;
+        spreadY?: T;
+        staggerMs?: T;
+        opacity?: T;
+        rotate?: T;
+        flipX?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

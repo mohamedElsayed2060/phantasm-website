@@ -1,4 +1,4 @@
-// C:\Users\mohamed\Desktop\island-map-real\phantasm-web\src\app\(frontend)\island-rzp\page.jsx
+// C:\Users\mohamed\Desktop\island-map-real\phantasm-web\src\app\(frontend)\page.jsx
 
 import IslandLab from '@/components/island/Island-latest/IslandLab'
 import { getIslandScene, getIslandHotspots, getIslandBootDock } from '@/lib/islandCms'

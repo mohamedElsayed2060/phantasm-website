@@ -30,21 +30,99 @@ function mapProjectCard(p) {
     singleImage: absUrl(singleImage, base),
   }
 }
+
+// {
+//   "name": "Circus",
+//   "id": "698fa4b570685c3cf968d503",
+//   "x": 31.563,
+//   "y": 58.164,
+//   "anchorX": 0.507,
+//   "anchorY": 0.469,
+//   "buildingW": 120,
+//   "buildingH": 120
+// }
 export async function getIslandScene() {
   try {
     const g = await fetchJSONServer('/api/globals/islandScene?depth=2', {
-      revalidate: 30,
+      revalidate: 10,
       tags: ['island'],
     })
 
     const bg = g?.background ? imgUrl(g.background) : ''
 
+    const decorationsRaw = Array.isArray(g?.decorations) ? g.decorations : []
+    const decorations = decorationsRaw
+      .map((d) => {
+        if (d?.enabled === false) return null
+        const rel = d?.image ? imgUrl(d.image) : ''
+        const src = absUrl(rel, base)
+        if (!src) return null
+        return {
+          name: d?.name || '',
+          order: Number(d?.order ?? 0),
+          src,
+          x: Number(d?.x ?? 0),
+          y: Number(d?.y ?? 0),
+          w: Number(d?.w ?? 120),
+          h: Number(d?.h ?? 120),
+          anchorX: Number(d?.anchorX ?? 0.5),
+          anchorY: Number(d?.anchorY ?? 0.5),
+          opacity: Number(d?.opacity ?? 1),
+          rotate: Number(d?.rotate ?? 0),
+          flipX: Boolean(d?.flipX),
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
+    const ambientRaw = Array.isArray(g?.ambient) ? g.ambient : []
+    const ambient = ambientRaw
+      .map((a) => {
+        if (a?.enabled === false) return null
+        const rel = a?.image ? imgUrl(a.image) : ''
+        const src = absUrl(rel, base)
+        if (!src) return null
+        return {
+          name: a?.name || '',
+          order: Number(a?.order ?? 0),
+          type: a?.type || 'cloud',
+          src,
+
+          startX: Number(a?.startX ?? -10),
+          startY: Number(a?.startY ?? 20),
+          endX: Number(a?.endX ?? 110),
+          endY: Number(a?.endY ?? 20),
+
+          w: Number(a?.w ?? 240),
+          h: Number(a?.h ?? 140),
+          anchorX: Number(a?.anchorX ?? 0.5),
+          anchorY: Number(a?.anchorY ?? 0.5),
+
+          durationMs: Number(a?.durationMs ?? 22000),
+          delayMs: Number(a?.delayMs ?? 0),
+          loop: a?.loop !== false,
+
+          count: Math.max(1, Number(a?.count ?? 1)),
+          spreadX: Number(a?.spreadX ?? 0),
+          spreadY: Number(a?.spreadY ?? 0),
+          staggerMs: Number(a?.staggerMs ?? 600),
+
+          opacity: Number(a?.opacity ?? 1),
+          rotate: Number(a?.rotate ?? 0),
+          flipX: Boolean(a?.flipX),
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
     return {
       backgroundSrc: absUrl(bg || '', base),
       maxZoomMult: Number(g?.maxZoomMult || 2.5),
+      decorations,
+      ambient,
     }
   } catch {
-    return { backgroundSrc: '', maxZoomMult: 2.5 }
+    return { backgroundSrc: '', maxZoomMult: 2.5, decorations: [], ambient: [] }
   }
 }
 

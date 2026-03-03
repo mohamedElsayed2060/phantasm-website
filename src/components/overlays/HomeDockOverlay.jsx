@@ -46,7 +46,7 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
 
   useEffect(() => {
     const urls = [
-      '/open-mobile-icon.png',
+      '/open-mobile-icon.gif',
       '/close.png',
       '/back-icon.png',
       '/location-single-icon.png',
@@ -140,13 +140,13 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
           type="button"
           onClick={open}
           style={launcherStyle}
-          className="h-9 w-9 rounded-md bg-[#2A1616]/80 border border-white/15 shadow-lg
-                     flex items-center justify-center hover:bg-[#2A1616] transition"
+          className="h-10 w-10
+                     flex items-center justify-center cursor-pointer"
           aria-label="Open dock"
         >
           <img
             className="w-full h-full"
-            src="/open-mobile-icon.png"
+            src="/open-mobile-icon.gif"
             alt="open-mobile"
             decoding="async"
             loading="eager"
@@ -172,7 +172,7 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                 <motion.button
                   type="button"
                   onClick={close}
-                  className="absolute -top-1 -right-1 z-10 h-8 w-8"
+                  className="absolute top-8 right-9 z-10 h-8 w-8"
                   aria-label="Close dock"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -188,7 +188,7 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                   src={openGifSrc}
                   alt="Opening"
                   draggable={false}
-                  className="block w-[250px] md:w-[280px] h-auto select-none"
+                  className="block w-[270px] md:w-[320px] h-auto select-none"
                   decoding="async"
                   loading="eager"
                   fetchPriority="high"
@@ -203,7 +203,7 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                     src={staticPhoneSrc}
                     alt="Dock"
                     draggable={false}
-                    className="block w-[250px] md:w-[280px] h-auto select-none"
+                    className="block w-[270px] md:w-[320px] h-auto select-none"
                     decoding="async"
                     loading="eager"
                     fetchPriority="high"
@@ -211,7 +211,7 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                   />
 
                   {/* content layer */}
-                  <div className="absolute inset-0 p-4">
+                  <div className="absolute inset-0 p-8 ps-10 pt-12">
                     <AnimatePresence mode="wait">
                       {/* GRID */}
                       {screenKey === 'grid' ? (
@@ -264,10 +264,10 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                           initial={{ opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 6 }}
-                          className="h-full w-full"
+                          className="h-full w-full py-4 px-8 md:px-11"
                         >
                           {/* header: Back left, icon+title right */}
-                          <div className="flex items-start justify-between mt-6">
+                          <div className="flex items-start justify-between mt-2">
                             <button
                               className="ms-1  text-white/80 text-[10px] underline"
                               onClick={() => setScreenKey('grid')}
@@ -287,7 +287,7 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                                 <img
                                   src={imgUrl(activeScreen.icon)}
                                   alt={activeScreen?.title || ''}
-                                  className="h-7 w-7"
+                                  className="h-9 w-9"
                                   draggable={false}
                                   decoding="async"
                                   loading="eager"
@@ -302,7 +302,7 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                           </div>
 
                           {/* body */}
-                          <div className="mt-3">
+                          <div className="">
                             {activeScreen?.type === 'messageForm' ? (
                               <MessageFormScreen
                                 submitLabel={activeScreen?.message?.submitLabel || 'SEND'}
@@ -548,7 +548,7 @@ function LocationsScreen({ locations = [] }) {
         <div className="p-2">
           <div className="flex items-start gap-[6px]">
             {/* ✅ responsive height wrapper */}
-            <div ref={boxRef} className="min-w-0 flex-1 h-[230px] sm:h-[240px] md:h-[290px]">
+            <div ref={boxRef} className="min-w-0 flex-1 h-[190px]  sm:h-[250px]">
               {/* ✅ scroll area fills wrapper */}
               <div
                 ref={scrollRef}

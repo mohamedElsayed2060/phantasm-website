@@ -17,6 +17,11 @@ import HotspotsLayer from './layers/HotspotsLayer'
 import BuildingsLayer from './layers/BuildingsLayer'
 import ProjectsOverlay from './overlays/ProjectsOverlay'
 import IslandBootDock from './overlays/IslandBootDock'
+import DebugBuildingPlacer from './layers/DebugBuildingPlacer'
+
+import DecorationsLayer from './layers/DecorationsLayer'
+import AmbientLayer from './layers/AmbientLayer'
+
 import { preloadImage, preloadMany } from './preloadImage'
 const SHOW_DEV = process.env.NEXT_PUBLIC_ISLAND_DEV === '1'
 
@@ -35,6 +40,13 @@ const POPOVER_MARGIN = 14
 const POPOVER_GAP = 14
 const LAST_TRANSFORM_KEY = 'phantasm:island:lastTransform'
 export default function IslandLab({ hotspots = [], scene, bootDock }) {
+  // /////// states
+  // for debugging buldings plases only=>>>>>>>
+  const [dbgId, setDbgId] = useState(null) // selected hotspot id
+  const [dbgPos, setDbgPos] = useState(null) // { worldX, worldY }
+  const [dbgAnchor, setDbgAnchor] = useState({ x: 0.5, y: 1 }) // preset
+  // for debugging buldings plases only end=>>>>>>>
+
   const HOTSPOTS = Array.isArray(hotspots) ? hotspots : []
   const backgroundSrc = scene?.backgroundSrc
 
@@ -409,11 +421,20 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
       .filter(Boolean)
 
     const hotspotIcons = HOTSPOTS.map((h) => h.hotspotIdleSrc).filter(Boolean)
-    preloadMany([...FRAME_ASSETS, backgroundSrc, ...hotspotIcons, ...discoveredLoops]).finally(
-      () => {
-        setSceneReady(true)
-      },
-    )
+
+    const decorUrls = (scene?.decorations || []).map((d) => d.src).filter(Boolean)
+    const ambientUrls = (scene?.ambient || []).map((a) => a.src).filter(Boolean)
+
+    preloadMany([
+      ...FRAME_ASSETS,
+      backgroundSrc,
+      ...hotspotIcons,
+      ...discoveredLoops,
+      ...decorUrls,
+      ...ambientUrls,
+    ]).finally(() => {
+      setSceneReady(true)
+    })
   }, [cmsReady, map.ready, view.w, view.h, reset])
   const blockCanvasInput = Boolean(overlay)
 
@@ -522,7 +543,59 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
       style={{ opacity: sceneReady ? 1 : 0 }}
     >
       {showLoading ? <div className="absolute inset-0 z-[200] bg-[#050505]" /> : null}
+      {SHOW_DEV ? (
+        <div className="absolute top-4 left-4 z-[300] pointer-events-auto bg-black/50 backdrop-blur-md p-3 rounded-lg border border-white/15">
+          <div className="text-white text-xs mb-2 font-semibold">DEBUG PLACER</div>
 
+          <div className="flex flex-wrap gap-2 max-w-[520px]">
+            {HOTSPOTS.map((s) => (
+              <button
+                key={String(s.id)}
+                className={`px-3 py-1 text-xs rounded border ${
+                  String(dbgId) === String(s.id) ? 'border-white' : 'border-white/20'
+                } text-white`}
+                onClick={() => {
+                  setDbgId(String(s.id))
+                  setDbgPos({ worldX: (s.x / 100) * map.w, worldY: (s.y / 100) * map.h })
+                }}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={() => setDbgAnchor({ x: 0.5, y: 1 })}
+              className="px-2 py-1 text-xs rounded border border-white/20 text-white"
+            >
+              Bottom-Center
+            </button>
+            <button
+              onClick={() => setDbgAnchor({ x: 0.5, y: 0.5 })}
+              className="px-2 py-1 text-xs rounded border border-white/20 text-white"
+            >
+              Center
+            </button>
+            <button
+              onClick={() => setDbgAnchor({ x: 0, y: 1 })}
+              className="px-2 py-1 text-xs rounded border border-white/20 text-white"
+            >
+              Bottom-Left
+            </button>
+            <button
+              onClick={() => setDbgAnchor({ x: 1, y: 1 })}
+              className="px-2 py-1 text-xs rounded border border-white/20 text-white"
+            >
+              Bottom-Right
+            </button>
+          </div>
+
+          <div className="mt-2 text-white/80 text-[11px]">
+            Drag the dashed box. On release, values print in the console.
+          </div>
+        </div>
+      ) : null}
       <TransformWrapper
         ref={(instance) => {
           apiRef.current = instance
@@ -609,6 +682,20 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
                     userSelect: 'none',
                   }}
                 />
+                <DecorationsLayer map={map} items={scene?.decorations || []} />
+                <AmbientLayer map={map} items={scene?.ambient || []} />
+
+                {SHOW_DEV && dbgId && dbgPos ? (
+                  <DebugBuildingPlacer
+                    map={map}
+                    spot={HOTSPOTS.find((h) => String(h.id) === String(dbgId))}
+                    pos={dbgPos}
+                    setPos={setDbgPos}
+                    anchor={dbgAnchor}
+                    viewportRef={viewportRef} // ✅ مهم
+                    transformState={transformState} // ✅ مهم
+                  />
+                ) : null}
 
                 <HotspotsLayer
                   map={map}
