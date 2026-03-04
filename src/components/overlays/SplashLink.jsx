@@ -19,18 +19,14 @@ export default function SplashLink({
     onClick?.(e)
     if (e.defaultPrevented) return
 
-    // لو لينك جديد/تاب جديد أو modifier keys سيبه طبيعي
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || rest?.target === '_blank') {
       return
     }
 
-    // منع Link الافتراضي علشان نتحكم
     e.preventDefault()
 
-    // افتح السلاش
     window.dispatchEvent(new CustomEvent('phantasm:splashStart', { detail: { minMs } }))
 
-    // روح للروت
     if (replace) router.replace(href)
     else router.push(href)
   }

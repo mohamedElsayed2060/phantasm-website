@@ -245,13 +245,6 @@
   font-style: normal;
   font-display: swap;
 }
-/* @font-face {
-  font-family: "Cairo";
-  src: url("/fonts/ar/cairo/Cairo-Black.ttf") format("truetype");
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-} */
 
 html {
   opacity: 0;
@@ -269,12 +262,15 @@ html[data-theme='dark'],
 html[data-theme='light'] {
   opacity: initial;
 }
-/* w : 108   h: 196*/
-/* ✅ خلي السحب الأفقي في السلايدر أفقي فعلاً */
 .about-team-splide .splide__track {
   touch-action: pan-x;
 }
-/* ✅ خلي الصور ما تمسكش سحب الصفحة */
 .about-no-pan {
   touch-action: pan-y;
+}
+.psp-list::-webkit-scrollbar {
+  display: none;
+}
+.pd-text::-webkit-scrollbar {
+  display: none;
 }

@@ -1,4 +1,4 @@
-import '@payloadcms/next/css' // ✅ مهم جدًا: يبقى هنا (root) عشان الهيدرشن
+import '@payloadcms/next/css'
 import './globals.css'
 
 import { Inter } from 'next/font/google'

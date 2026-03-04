@@ -18,7 +18,6 @@ export const ProjectCategories: CollectionConfig = {
     read: () => true, // ✅ public
   },
   fields: [
-    // order (للترتيب في الليست والـ dropdown)
     {
       name: 'order',
       type: 'number',
@@ -62,7 +61,7 @@ export const ProjectCategories: CollectionConfig = {
       },
     },
 
-    // optional: short subtitle/description لو هتظهر فوق الليست
+    // optional: short subtitle/description
     {
       name: 'subtitle',
       type: 'text',

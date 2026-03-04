@@ -3,7 +3,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import PixelFrameOverlay from '@/components/ui/PixelFrameOverlay'
-
+const dockV = {
+  hidden: { opacity: 0, y: 16, scale: 0.98, filter: 'blur(4px)' },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+  },
+  exit: { opacity: 0, y: 12, scale: 0.985, filter: 'blur(4px)', transition: { duration: 0.2 } },
+}
 // --- Hook Typewriter ---
 function useTypewriter(text, { speed = 14, enabled = true } = {}) {
   const [out, setOut] = useState('')
@@ -46,7 +56,6 @@ function useTypewriter(text, { speed = 14, enabled = true } = {}) {
   return { out, typing }
 }
 
-// ✅ يحول introPages -> slides (كل paragraph تعتبر slide لوحدها)
 function buildSlides(spot) {
   const pagesRaw = Array.isArray(spot?.introPages) ? spot.introPages : []
 
@@ -66,7 +75,6 @@ function buildSlides(spot) {
 
     if (!title || paragraphs.length === 0) continue
 
-    // ✅ كل paragraph = slide منفصلة بنفس عنوان الصفحة
     for (const p of paragraphs) {
       slides.push({ title, text: p })
     }
@@ -78,16 +86,15 @@ function buildSlides(spot) {
 export default function BuildingDialogPanel({ open, spot, player, onClose, typingSpeed = 14 }) {
   const slides = useMemo(() => buildSlides(spot), [spot])
 
-  // ✅ لا يوجد fallback
   const enabled = Boolean(open) && spot?.introEnabled !== false && slides.length > 0
-  if (!enabled) return null
 
   const [index, setIndex] = useState(0)
 
-  // ✅ reset when opening or changing building
   useEffect(() => {
     if (enabled) setIndex(0)
   }, [enabled, spot?.id])
+
+  if (!enabled) return null
 
   const hasPrev = index > 0
   const hasNext = index < slides.length - 1
@@ -97,18 +104,6 @@ export default function BuildingDialogPanel({ open, spot, player, onClose, typin
     speed: typingSpeed,
     enabled: open,
   })
-
-  const dockV = {
-    hidden: { opacity: 0, y: 16, scale: 0.98, filter: 'blur(4px)' },
-    show: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      filter: 'blur(0px)',
-      transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
-    },
-    exit: { opacity: 0, y: 12, scale: 0.985, filter: 'blur(4px)', transition: { duration: 0.2 } },
-  }
 
   return (
     <AnimatePresence>
@@ -156,7 +151,7 @@ export default function BuildingDialogPanel({ open, spot, player, onClose, typin
 
           {/* --- TEXT BOX --- */}
           <div className="relative flex-1 min-w-0">
-            {/* مؤشر Typing */}
+            {/* Typing */}
             <AnimatePresence>
               {typing && (
                 <motion.div
@@ -182,12 +177,10 @@ export default function BuildingDialogPanel({ open, spot, player, onClose, typin
               innerClassName="overflow-hidden"
             >
               <div className="relative min-h-[105px] p-3 md:p-5">
-                {/* ✅ Title ثابت فوق (من introPages.title) */}
                 <div className="mb-2 text-white font-bold tracking-[0.22em] text-[11px] uppercase">
                   {current?.title || spot?.name || 'BUILDING'}
                 </div>
 
-                {/* النص (Paragraph واحدة فقط) */}
                 <div className="pb-2">
                   <div className="text-white/90 text-[10px] sm:text-[11px] leading-[1.55] tracking-[0.14em] uppercase whitespace-pre-wrap">
                     {out}
@@ -195,7 +188,6 @@ export default function BuildingDialogPanel({ open, spot, player, onClose, typin
                   </div>
                 </div>
 
-                {/* --- أزرار التحكم (نفس مكان وشكل القديم) --- */}
                 <div className="absolute bottom-2 right-2 flex items-center gap-3">
                   {/* Prev */}
                   <button

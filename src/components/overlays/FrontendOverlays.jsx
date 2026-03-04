@@ -35,7 +35,6 @@ export default function FrontendOverlays({ globals }) {
   const anyOverlayLocked = Object.values(locks).some(Boolean)
   const isProjectsOpen = Boolean(locks?.projects)
 
-  // ✅ قفل gestures لما أي overlay مفتوح/locked
   useLockIslandGestures(anyOverlayLocked && isHome)
   useLockPageZoom(true)
   return (

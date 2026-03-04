@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import { percentToPxX, percentToPxY } from '../utils'
 
 function BuildingSprite({ spot, map, mode, onClick }) {
@@ -48,14 +48,21 @@ export default function BuildingsLayer({
   spawningId,
   onBuiltBuildingClick,
 }) {
+  const discovered = useMemo(
+    () =>
+      hotspots.filter((h) => {
+        const hid = String(h.id)
+        return discoveredIds.has(hid) && hid !== String(spawningId)
+      }),
+    [hotspots, discoveredIds, spawningId],
+  )
+
+  const spawningSpot = useMemo(
+    () => (spawningId ? hotspots.find((h) => String(h.id) === String(spawningId)) : null),
+    [hotspots, spawningId],
+  )
+
   if (!map?.ready) return null
-
-  const discovered = hotspots.filter((h) => {
-    const hid = String(h.id)
-    return discoveredIds.has(hid) && hid !== String(spawningId)
-  })
-
-  const spawningSpot = spawningId ? hotspots.find((h) => String(h.id) === String(spawningId)) : null
 
   return (
     <>

@@ -5,7 +5,7 @@ import FrontendOverlays from '@/components/overlays/FrontendOverlays'
 import SplashRouteTransitionClient from '@/components/overlays/SplashRouteTransitionClient'
 import PageTransition from '@/components/motion/PageTransition'
 import SsrSplashHider from '@/components/overlays/SsrSplashHider'
-
+import SplashManagerClient from '@/components/overlays/SplashManagerClient'
 export const dynamic = 'force-dynamic'
 export const metadata = {
   title: {
@@ -49,14 +49,7 @@ export default async function FrontendLayout({ children }) {
         </div>
       </div>
       {/* ✅ remove SSR splash after minimum time */}
-      <SsrSplashHider minMs={650} />
-      {/* ✅ Route transitions only (click/back). No initialOnMount to prevent flash. */}
-      <SplashRouteTransitionClient
-        // defaultMinMs={650}
-        initialOnMount={false}
-        // logoUrl={logoUrl}
-        // companyName={companyName}
-      />
+      <SplashManagerClient />
       <FrontendOverlays globals={globals} />
       {/* ✅ Page enter/exit animation لكل الصفحات */}
       <PageTransition>{children}</PageTransition>{' '}

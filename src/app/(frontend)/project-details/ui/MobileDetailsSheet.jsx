@@ -103,10 +103,6 @@ export default function MobileDetailsSheet({ project, anchorRef }) {
     else snapTo(collapsedTop, false)
   }, [])
 
-  // ── Sheet touch listeners ──
-  // السر: بنحدد نوع الـ gesture في touchstart نفسه
-  // ولو هو sheet gesture بنضيف touchmove بـ passive:false في touchstart
-  // ولو مش sheet gesture مش بنضيفه خالص → مفيش warning
   useEffect(() => {
     if (!ready) return
     const el = sheetRef.current
@@ -137,11 +133,7 @@ export default function MobileDetailsSheet({ project, anchorRef }) {
       const atTop = scrollTop <= 2
       const startY = e.touches[0].clientY
 
-      // هنحدد هل ممكن يبقى sheet gesture
-      // مش هنعرف الاتجاه غير في touchmove، بس هنحدد الحالات الممكنة
-      const couldBeSheet =
-        !isExpandedRef.current || // مقفول → أي سحب لفوق ممكن يفتح
-        (isExpandedRef.current && atTop) // مفتوح والـ scroll في الأعلى → ممكن يقفل
+      const couldBeSheet = !isExpandedRef.current || (isExpandedRef.current && atTop)
 
       if (!couldBeSheet) return // مش هنتدخل خالص
 
@@ -149,12 +141,10 @@ export default function MobileDetailsSheet({ project, anchorRef }) {
       state.startTop = topVal.get()
       state.isSheetGesture = false
 
-      // بنضيف touchmove بـ passive:false هنا بس لما يكون ممكن يبقى sheet gesture
       const onMove = (ev) => {
         const dy = ev.touches[0].clientY - state.startY
 
         if (!state.isSheetGesture) {
-          // أول حركة كبيرة نحدد
           if (Math.abs(dy) < 8) return
 
           const goingUp = dy < 0
@@ -165,13 +155,11 @@ export default function MobileDetailsSheet({ project, anchorRef }) {
           } else if (goingDown && isExpandedRef.current) {
             state.isSheetGesture = true
           } else {
-            // مش sheet gesture → نشيل الـ listener ونسيب الـ scroll
             cleanup()
             return
           }
         }
 
-        // sheet gesture مؤكد
         ev.preventDefault()
         const { expandedTop, collapsedTop } = snapsRef.current
         topVal.set(clamp(state.startTop + dy, expandedTop, collapsedTop))
@@ -190,7 +178,6 @@ export default function MobileDetailsSheet({ project, anchorRef }) {
       state.moveFn = onMove
       state.endFn = onEnd
 
-      // passive:false هنا عشان نقدر نعمل preventDefault لو اتأكدنا إنه sheet gesture
       el.addEventListener('touchmove', onMove, { passive: false })
       el.addEventListener('touchend', onEnd, { passive: true })
       el.addEventListener('touchcancel', onEnd, { passive: true })
@@ -203,7 +190,6 @@ export default function MobileDetailsSheet({ project, anchorRef }) {
       cleanup()
     }
   }, [ready, topVal])
-  // ── Wheel / Trackpad (Desktop) ──
   useEffect(() => {
     if (!ready) return
     const el = sheetRef.current

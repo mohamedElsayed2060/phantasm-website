@@ -79,15 +79,15 @@ export const SceneHotspots: CollectionConfig = {
       },
     },
 
-    // ✅ optional bounding box (يساعد في placement)
+    // ✅ optional bounding box
     { name: 'buildingW', type: 'number', defaultValue: 240 },
     { name: 'buildingH', type: 'number', defaultValue: 240 },
 
     // ✅ hotspot + building gifs
-    { name: 'hotspotIdle', type: 'upload', relationTo: 'media' }, // gif glow/idle
-    { name: 'buildingSpawn', type: 'upload', relationTo: 'media' }, // gif خروج المبنى
+    { name: 'hotspotIdle', type: 'upload', relationTo: 'media' },
+    { name: 'buildingSpawn', type: 'upload', relationTo: 'media' },
 
-    { name: 'buildingLoop', type: 'upload', relationTo: 'media' }, // gif ثابت
+    { name: 'buildingLoop', type: 'upload', relationTo: 'media' },
     {
       name: 'spawnDurationMs',
       label: 'Spawn Duration (ms)',

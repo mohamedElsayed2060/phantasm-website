@@ -6,7 +6,6 @@ export default function useLockPageZoom(enabled = true) {
     if (!enabled) return
 
     const onWheel = (e) => {
-      // ✅ امنع browser zoom بالـ ctrl + wheel
       if (e.ctrlKey) e.preventDefault()
     }
 
@@ -14,7 +13,6 @@ export default function useLockPageZoom(enabled = true) {
       const isMod = e.ctrlKey || e.metaKey
       if (!isMod) return
 
-      // ✅ امنع ctrl/cmd + (+/-/0) للزوم
       const k = e.key
       if (k === '+' || k === '=' || k === '-' || k === '0') {
         e.preventDefault()
@@ -22,7 +20,6 @@ export default function useLockPageZoom(enabled = true) {
     }
 
     const onTouchMove = (e) => {
-      // ✅ امنع pinch (two fingers) فقط
       if (e.touches && e.touches.length > 1) {
         e.preventDefault()
       }

@@ -2,6 +2,11 @@
 
 import React, { useEffect, useRef } from 'react'
 import { percentToPxX, percentToPxY } from '../utils'
+const HOVER_DELAY_MS = 160
+const isCoarsePointer =
+  typeof window !== 'undefined' &&
+  window.matchMedia &&
+  window.matchMedia('(hover: none), (pointer: coarse)').matches
 
 export default function HotspotsLayer({
   map,
@@ -11,29 +16,9 @@ export default function HotspotsLayer({
   onHotspotClick,
 }) {
   const hoverTimerRef = useRef(null)
-  const startPosRef = useRef({ x: 0, y: 0 })
-  const lastMoveRef = useRef(0)
+
   useEffect(() => {
     return () => hoverTimerRef.current && clearTimeout(hoverTimerRef.current)
-  }, [])
-
-  // ✅ hover مش موجود على touch devices
-  const isCoarsePointer =
-    typeof window !== 'undefined' &&
-    window.matchMedia &&
-    window.matchMedia('(hover: none), (pointer: coarse)').matches
-
-  const HOVER_DELAY_MS = 160
-  const HOVER_INTENT_MS = 220
-  const MOVE_TOLERANCE_PX = 8
-  const RECENT_MOVE_WINDOW_MS = 120
-
-  useEffect(() => {
-    const onMove = () => {
-      lastMoveRef.current = Date.now()
-    }
-    window.addEventListener('mousemove', onMove, { passive: true })
-    return () => window.removeEventListener('mousemove', onMove)
   }, [])
 
   if (!map?.ready) return null
@@ -60,13 +45,11 @@ export default function HotspotsLayer({
             className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer"
             style={{ left: `${pxX}px`, top: `${pxY}px`, width: size, height: size, zIndex: 10 }}
             onClick={() => {
-              // ✅ click/tap دايمًا شغال (خصوصًا للموبايل)
               if (trigger !== 'hover' || isCoarsePointer) onHotspotClick(spot)
             }}
             onMouseEnter={() => {
               if (!allowHover) return
 
-              // ✅ أمان إضافي
               if (String(spawningId) === sid) return
               if (discoveredIds?.has && discoveredIds.has(sid)) return
 

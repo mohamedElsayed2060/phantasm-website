@@ -26,6 +26,5 @@ export default async function ProjectDetailsPage({ params }) {
   const project = await getProjectBySlugServer(slug)
   if (!project) return notFound()
 
-  // ✅ نخلي الـ Client زي ما هو، بس نمررله الداتا جاهزة
   return <ProjectDetailsClient project={project} />
 }

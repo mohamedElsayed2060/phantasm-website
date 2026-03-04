@@ -29,16 +29,26 @@ function toAbsoluteUrl(maybeRelative) {
   const s = String(maybeRelative || '').trim()
   if (!s) return ''
   if (s.startsWith('http://') || s.startsWith('https://')) return s
+  if (typeof window === 'undefined') return s
   if (s.startsWith('//')) return window.location.protocol + s
   if (s.startsWith('/')) return window.location.origin + s
   return window.location.origin + '/' + s
 }
-
 const POPOVER_W = 360
 const POPOVER_H = 190
 const POPOVER_MARGIN = 14
 const POPOVER_GAP = 14
 const LAST_TRANSFORM_KEY = 'phantasm:island:lastTransform'
+
+const FRAME_ASSETS = [
+  '/frames/title-fram.png',
+  '/frames/CardFrame.png',
+  '/frames/imgFrame.png',
+  '/frames/titleFrame.png',
+  '/frames/dock-frame.png',
+  '/frames/botton-frame.png',
+]
+
 export default function IslandLab({ hotspots = [], scene, bootDock }) {
   // /////// states
   // for debugging buldings plases only=>>>>>>>
@@ -47,7 +57,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
   const [dbgAnchor, setDbgAnchor] = useState({ x: 0.5, y: 1 }) // preset
   // for debugging buldings plases only end=>>>>>>>
 
-  const HOTSPOTS = Array.isArray(hotspots) ? hotspots : []
+  const HOTSPOTS = useMemo(() => (Array.isArray(hotspots) ? hotspots : []), [hotspots])
   const backgroundSrc = scene?.backgroundSrc
 
   const maxZoomMult = Number(scene?.maxZoomMult)
@@ -93,11 +103,27 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     name: 'Player',
     avatarSrc: '',
   })
-  // ✅ overlay position & placement (screen-space) for openProjectsFor
-  const overlay = useMemo(() => {
+
+  const [overlayPos, setOverlayPos] = useState(null)
+
+  // #######################
+  const overlayMeta = useMemo(() => {
     if (!openProjectsFor) return null
     const spot = HOTSPOTS.find((h) => String(h.id) === String(openProjectsFor))
-    if (!spot || !map.ready || !view.w || !view.h) return null
+    if (!spot || !map.ready) return null
+
+    const popW = Math.max(0, Math.min(POPOVER_W, view.w - 24))
+    return { spot, popW, popH: POPOVER_H }
+  }, [openProjectsFor, map.ready, view.w, HOTSPOTS])
+
+  useEffect(() => {
+    if (!overlayMeta || !view.w || !view.h || !map.ready) {
+      setOverlayPos(null)
+      return
+    }
+
+    const { spot, popW, popH } = overlayMeta
+    const currentTransform = lastTransformRef.current
 
     const baseWorldX = percentToPxX(spot.x, map.w)
     const baseWorldY = percentToPxY(spot.y, map.h)
@@ -115,12 +141,12 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     const tl = worldToScreen({
       worldX: buildingWorldLeft,
       worldY: buildingWorldTop,
-      state: transformState,
+      state: currentTransform, // ✅
     })
     const br = worldToScreen({
       worldX: buildingWorldRight,
       worldY: buildingWorldBottom,
-      state: transformState,
+      state: currentTransform, // ✅
     })
 
     const buildingScreen = {
@@ -131,9 +157,6 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
       cx: (tl.sx + br.sx) / 2,
       cy: (tl.sy + br.sy) / 2,
     }
-
-    const popW = Math.min(POPOVER_W, view.w - 24)
-    const popH = POPOVER_H
 
     const placement = choosePlacementNoBottom({
       viewportW: view.w,
@@ -152,29 +175,26 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
       left = clampToViewportX(buildingScreen.cx, view.w, popW, POPOVER_MARGIN)
       top = buildingScreen.top - POPOVER_GAP
     }
-
     if (placement === 'right') {
       left = buildingScreen.right + POPOVER_GAP
       top = buildingScreen.cy
     }
-
     if (placement === 'left') {
       left = buildingScreen.left - POPOVER_GAP
       top = buildingScreen.cy
     }
 
-    return { spot, placement, left, top, popW, popH, buildingScreen }
-  }, [openProjectsFor, map.ready, map.w, map.h, view.w, view.h, transformState, HOTSPOTS])
+    setOverlayPos({ ...overlayMeta, placement, left, top, buildingScreen })
+  }, [overlayMeta, view.w, view.h, map.ready, map.w, map.h])
+  // #######################
 
   const showLoading = !cmsReady
-  // 1) اقرأ player مرة واحدة عند mount
-
-  useEffect(() => {
-    if (!sceneReady) return
-    try {
-      sessionStorage.setItem(LAST_TRANSFORM_KEY, JSON.stringify(transformState))
-    } catch {}
-  }, [sceneReady, transformState])
+  // useEffect(() => {
+  //   if (!sceneReady) return
+  //   try {
+  //     sessionStorage.setItem(LAST_TRANSFORM_KEY, JSON.stringify(transformState))
+  //   } catch {}
+  // }, [sceneReady, transformState])
   useEffect(() => {
     try {
       const raw = localStorage.getItem('phantasm:player')
@@ -189,7 +209,6 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     } catch {}
   }, [])
 
-  // 2) اسمع event بعد اختيار الأفاتار
   useEffect(() => {
     const onPlayerSelected = () => {
       try {
@@ -372,14 +391,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     },
     [clampToBounds, coverScale, view.w, view.h, map.w, map.h],
   )
-  const FRAME_ASSETS = [
-    '/frames/title-fram.png',
-    '/frames/CardFrame.png',
-    '/frames/imgFrame.png',
-    '/frames/titleFrame.png',
-    '/frames/dock-frame.png',
-    '/frames/botton-frame.png',
-  ]
+
   // ====== init once ======
   const didInit = useRef(false)
   useEffect(() => {
@@ -390,8 +402,6 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     if (didInit.current) return
 
     didInit.current = true
-
-    // ✅ حاول restore transform (لو راجع Back)
     let restored = false
     try {
       const raw = sessionStorage.getItem(LAST_TRANSFORM_KEY)
@@ -408,7 +418,6 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
       }
     } catch {}
 
-    // ✅ لو مفيش restore اعمل reset الطبيعي
     if (!restored) reset({ duration: 0 })
 
     try {
@@ -436,7 +445,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
       setSceneReady(true)
     })
   }, [cmsReady, map.ready, view.w, view.h, reset])
-  const blockCanvasInput = Boolean(overlay)
+  const blockCanvasInput = Boolean(overlayPos)
 
   // ====== resize => clamp ======
   useEffect(() => {
@@ -445,7 +454,6 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     if (!apiRef.current) return
     if (!view.w || !view.h) return
 
-    // ✅ أول مرة بس نخزن المقاس ومانعملش reset
     const prev = lastViewRef.current
     if (!prev.w || !prev.h) {
       lastViewRef.current = { w: view.w, h: view.h }
@@ -454,9 +462,6 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
 
     const dw = Math.abs(view.w - prev.w)
     const dh = Math.abs(view.h - prev.h)
-
-    // ✅ حد أدنى للتغيير (عشان نبعد عن jitter)
-    // devtools close/open غالبًا بيغير أكتر من كده
     const THRESHOLD_PX = 80
     if (dw < THRESHOLD_PX && dh < THRESHOLD_PX) {
       lastViewRef.current = { w: view.w, h: view.h }
@@ -465,9 +470,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
 
     lastViewRef.current = { w: view.w, h: view.h }
 
-    // ✅ لو المستخدم بيسحب دلوقتي، سيبه
     if (isInteractingRef.current) return
-    // ✅ لو overlay مفتوح (إنت عامل blockCanvasInput) سيبه
     if (blockCanvasInput) return
 
     // ✅ debounce
@@ -475,7 +478,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     resizeTimerRef.current = window.setTimeout(() => {
       if (isInteractingRef.current) return
       if (blockCanvasInput) return
-      reset({ duration: 0 }) // 👈 نفس زرار Reset بتاعك
+      reset({ duration: 0 })
     }, 120)
 
     return () => {
@@ -521,7 +524,6 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
       if (spawnTimerRef.current) window.clearTimeout(spawnTimerRef.current)
       const ms = Number(spot.spawnDurationMs || 1700)
       spawnTimerRef.current = window.setTimeout(() => {
-        // ✅ اتأكد إن loop جاهز قبل ما نبدّل من spawn → built
         preloadImage(spot.buildingLoopSrc).then(() => {
           setSpawningId((curr) => (String(curr) === sid ? null : curr))
           setOpenProjectsFor(sid)
@@ -534,6 +536,12 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
   useEffect(() => {
     return () => {
       if (openListTimerRef.current) window.clearTimeout(openListTimerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
   }, [])
   return (
@@ -620,16 +628,24 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
         onPanningStop={() => {
           isInteractingRef.current = false
           snapToBounds({ duration: 400 })
+          try {
+            sessionStorage.setItem(LAST_TRANSFORM_KEY, JSON.stringify(lastTransformRef.current))
+          } catch {}
         }}
         onZoomStop={() => {
           isInteractingRef.current = false
           snapToBounds({ duration: 400 })
+          try {
+            sessionStorage.setItem(LAST_TRANSFORM_KEY, JSON.stringify(lastTransformRef.current))
+          } catch {}
         }}
         onTransformed={(ref) => {
           const st = ref?.state
           if (!st) return
 
           lastTransformRef.current = { x: st.positionX, y: st.positionY, scale: st.scale }
+
+          if (!SHOW_DEV) return // ✅ ده لو Debug فقط
 
           if (rafRef.current) return
           rafRef.current = window.requestAnimationFrame(() => {
@@ -662,7 +678,6 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
               </div>
             ) : null}
 
-            {/* ✅ IMPORTANT: خليها 100% بدل 100vw/100vh لتقليل مشاكل الموبايل */}
             <TransformComponent
               wrapperStyle={{ width: '100%', height: '100%' }}
               contentStyle={{ width: `${map.w}px`, height: `${map.h}px` }}
@@ -692,8 +707,8 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
                     pos={dbgPos}
                     setPos={setDbgPos}
                     anchor={dbgAnchor}
-                    viewportRef={viewportRef} // ✅ مهم
-                    transformState={transformState} // ✅ مهم
+                    viewportRef={viewportRef}
+                    transformState={transformState}
                   />
                 ) : null}
 
@@ -713,27 +728,19 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
                   onBuiltBuildingClick={(spot) => {
                     const sid = String(spot.id)
                     closeBootDock()
-
-                    // ✅ اقفل أي list قديمة فورًا عشان ما تعملش jump أثناء الحركة
                     setOpenProjectsFor(null)
-
-                    // ✅ اقفل panels المرتبطة بالمشروع
                     setActiveProject(null)
                     setDetailsOpen(false)
                     setDialogOpen(false)
 
-                    // ✅ شيل أي timer قديم (لو المستخدم ضغط بسرعة على مباني مختلفة)
                     if (openListTimerRef.current) window.clearTimeout(openListTimerRef.current)
 
-                    // ✅ نفّذ الحركة/الزوم بالمدة الفعلية الموجودة عندك
                     const duration = 450
                     focusSpot(spot, { targetScaleMult: 1.12, duration })
 
-                    // ✅ افتح الليست بعد انتهاء الحركة + buffer بسيط عشان transformState يثبت
                     openListTimerRef.current = window.setTimeout(() => {
                       setOpenProjectsFor(sid)
 
-                      // ✅ NEW: افتح Building Dialog مع فتح الليست (مرة واحدة لكل مبنى)
                       setDialogOpen(true)
                     }, duration + 80)
                   }}
@@ -749,11 +756,11 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
               pages={bootDock?.pages}
             />
 
-            {overlay ? (
+            {overlayPos ? (
               <ProjectsOverlay
-                open={!!overlay}
+                open={!!overlayPos}
                 view={view}
-                overlay={overlay}
+                overlay={overlayPos}
                 activeProject={activeProject}
                 detailsOpen={detailsOpen}
                 dialogOpen={dialogOpen}
@@ -767,8 +774,6 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
                 onProjectPick={(p) => {
                   setActiveProject(p)
                   setDetailsOpen(true)
-
-                  // ✅ NEW: اقفل building dialog لو لسه مفتوح
                   setDialogOpen(false)
                 }}
                 onOpenDetails={() => setDetailsOpen(true)}

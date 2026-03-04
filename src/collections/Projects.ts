@@ -31,7 +31,7 @@ export const Projects: CollectionConfig = {
       type: 'relationship',
       relationTo: 'project-categories',
       required: true,
-      hasMany: false, // ✅ مشروع واحد تحت كاتيجوري واحدة
+      hasMany: false,
       index: true,
     },
     // projectName
@@ -117,7 +117,7 @@ export const Projects: CollectionConfig = {
         features: ({ defaultFeatures }) => [...defaultFeatures],
       }),
     },
-    // Achievement مثال: "$1M+ in Revenue"
+    // Achievement
     {
       name: 'achievement',
       type: 'text',
@@ -206,7 +206,7 @@ export const Projects: CollectionConfig = {
     },
 
     // =========================
-    // Optional fields (كلها اختياري)
+    // Optional fields
     // =========================
 
     // technologies

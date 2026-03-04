@@ -35,7 +35,7 @@ function useTypewriter(text, { speed = 14 } = {}) {
       setOut(full.slice(0, i))
 
       if (i >= full.length) {
-        setIsTyping(false) // ✅ خلص
+        setIsTyping(false)
         return
       }
 
@@ -58,8 +58,8 @@ function useTypewriter(text, { speed = 14 } = {}) {
 
   return { out, isTyping }
 }
-const FRAME_MAIN = '/frames/dock-frame.png' // بدّلها لو اسمها مختلف عندك
-const FRAME_THIN = '/frames/titleFrame.png' // بدّلها لو اسمها مختلف عندك
+const FRAME_MAIN = '/frames/dock-frame.png'
+const FRAME_THIN = '/frames/titleFrame.png'
 
 export default function AboutUsClient({ data }) {
   const backHref = data?.backHref || '/'
@@ -99,7 +99,7 @@ export default function AboutUsClient({ data }) {
     imgUrl(selectedMember?.avatarAnimated) ||
     null
   useEffect(() => {
-    // ✅ preload selected member images to avoid swap delay
+    //  preload selected member images to avoid swap delay
     const urls = [
       imgUrl(selectedMember?.realPhoto),
       imgUrl(selectedMember?.avatarStatic),
@@ -114,7 +114,7 @@ export default function AboutUsClient({ data }) {
   }, [selectedMember?.key])
 
   useEffect(() => {
-    // ✅ preload team static avatars (cheap) for instant slider render
+    //  preload team static avatars (cheap) for instant slider render
     members.forEach((m) => {
       const u = imgUrl(m?.avatarStatic)
       if (!u) return
@@ -204,7 +204,7 @@ export default function AboutUsClient({ data }) {
                 gap: '5px',
                 pagination: false,
                 arrows: false,
-                drag: true, // بدل 'free' (free بتزود تدخلها في wheel/touch)
+                drag: true,
                 focus: 0,
                 breakpoints: {
                   1024: { perPage: 5 },
@@ -220,8 +220,6 @@ export default function AboutUsClient({ data }) {
 
                 const staticSrc = imgUrl(m?.avatarStatic)
                 const animSrc = imgUrl(m?.avatarAnimated)
-
-                // ✅ الصورة تتحرك لو hover أو active
                 const showSrc = isActive || isHover ? animSrc || staticSrc : staticSrc
 
                 return (
@@ -244,8 +242,6 @@ export default function AboutUsClient({ data }) {
 
         {/* ====== MEMBER DETAILS SECTION ====== */}
         <div className="relative md:mt-10 mb-10">
-          {/* الـ margin الخارجي ده عشان نسيب مساحة للكارت لما يخرج بره م يخبطش في اللي فوقيه */}
-
           <PixelFrameOverlay
             frameSrc={'/frames/about-us-first-frame.png'}
             slice={16}
@@ -274,17 +270,17 @@ export default function AboutUsClient({ data }) {
                   className="h-full md:min-h-[300px]"
                 >
                   <div className="h-full flex flex-col min-h-[280px] md:min-h-0 bg-[#951212] p-[]">
-                    {/* ✅ Image Frame (this is the part that stretches) */}
+                    {/*  Image Frame (this is the part that stretches) */}
                     <div className="flex-1 min-h-[190px] md:min-h-0 flex">
                       <PixelFrameOverlay
-                        frameSrc={FRAME_MAIN} // ✅ الفريم الجديد حول الصورة (غيّر الاسم لمسارك)
+                        frameSrc={FRAME_MAIN}
                         slice={16}
                         bw={16}
                         pad={10}
                         bg="#1B0C0C"
                         className="w-full h-full md:min-h-full min-h-[260px]"
                       >
-                        {/* ✅ Center the image + show all of it */}
+                        {/*  Center the image + show all of it */}
                         <div className="w-full h-full flex items-center justify-center overflow-hidden">
                           {detailsImg ? (
                             <PremiumImage
@@ -304,7 +300,7 @@ export default function AboutUsClient({ data }) {
                       </PixelFrameOverlay>
                     </div>
 
-                    {/* ✅ Name Label stays stuck to bottom */}
+                    {/*  Name Label stays stuck to bottom */}
                     <div className="m-1 md:m-2">
                       <PixelFrameOverlay
                         frameSrc={'/frames/photo-name.png'}
@@ -357,14 +353,13 @@ function TeamItem({ isActive, isHover, imgSrc, onEnter, onLeave, onClick, frameS
       onClick={onClick}
       className="cursor-pointer select-none"
     >
-      {/* ✅ دايمًا نفس الـ wrapper (نفس المقاس) */}
       <PixelFrameOverlay
         frameSrc={'/frames/member-frame.png'}
         slice={13}
         bw={13}
         pad={8}
         bg="transparent"
-        frameOpacity={showFrame ? 1 : 0} // ✅ البوردر بس اللي بيظهر/يختفي
+        frameOpacity={showFrame ? 1 : 0}
         className="transition-opacity duration-150"
       >
         <div

@@ -20,12 +20,10 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
   const pathname = usePathname()
   const splashRouter = useSplashRouter(750)
 
-  // ✅ احسب شروط الرندر بدري (من غير ما نعمل return بدري)
   const enabled = config?.enabled !== false
   const onlyHome = config?.showOnlyOnHome !== false
   const shouldRender = allowOpen !== false && enabled && (!onlyHome || isHomePath(pathname))
 
-  // ✅ باقي القيم/hooks لازم تتنفذ دايمًا عشان ترتيب الـ hooks مايتغيرش
   const spawnMs = config?.timing?.spawnMs ?? 1200
   const animateIcons = config?.ui?.animateIconsOnOpen !== false
   const staggerMs = config?.ui?.iconsStaggerMs ?? 60
@@ -129,7 +127,6 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
 
   const activeScreen = screenKey !== 'grid' ? getScreenByKey(screenKey) : null
 
-  // ✅ الرجوع لـ null يكون هنا فقط بعد ما كل الـ hooks اتنفذت
   if (!shouldRender) return null
 
   return (
@@ -238,7 +235,6 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                             </div>
                           </div>
 
-                          {/* ✅ spacer يدزق البوكس التاني لتحت */}
                           <div className="flex-1" />
 
                           {/* BOTTOM BOX */}
@@ -427,8 +423,6 @@ function MessageFormScreen({ submitLabel = 'SEND', successText = 'Message sent!'
   const canSend = name.trim() && email.trim() && message.trim()
   async function submit() {
     if (status === 'sending') return
-
-    // validation بسيط
     if (!name.trim() || !email.trim() || !message.trim()) return
 
     setStatus('sending')
@@ -514,7 +508,7 @@ function LocationsScreen({ locations = [] }) {
         scrollTop: el.scrollTop,
         scrollHeight: el.scrollHeight,
         clientHeight: el.clientHeight,
-        trackHeight: box.clientHeight, // ✅ نفس ارتفاع البوكس
+        trackHeight: box.clientHeight,
       })
     }
 

@@ -6,9 +6,10 @@ import { AnimatePresence, motion } from 'framer-motion'
 export default function SplashOverlay({
   open = false,
   minMs = 520,
-  logoUrl = '/logo.gif', // عدّلها لو عندك مسار مختلف
+  logoUrl = '/logo.gif',
   companyName = 'PHANTASM',
   onMinDone,
+  noFadeInInitial = false,
 }) {
   const [minDone, setMinDone] = useState(false)
   const startRef = useRef(0)
@@ -41,7 +42,7 @@ export default function SplashOverlay({
       {show ? (
         <motion.div
           key="splash"
-          initial={{ opacity: 0 }}
+          initial={noFadeInInitial ? { opacity: 1 } : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}

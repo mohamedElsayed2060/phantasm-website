@@ -50,7 +50,6 @@ export default function PremiumImage({
         aspectRatio: ratio.replace(':', '/'),
       }}
     >
-      {/* ✅ fallback spacer (لو aspect-ratio مش مدعوم لأي سبب) */}
       <div aria-hidden style={{ paddingTop }} />
 
       {skeleton && !loaded ? <div className="absolute inset-0 animate-pulse bg-black/10" /> : null}

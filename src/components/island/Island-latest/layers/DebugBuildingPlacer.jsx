@@ -4,40 +4,52 @@ import React, { useRef, useState, useEffect, useCallback } from 'react'
 
 const clamp01 = (v) => Math.max(0, Math.min(1, v))
 
+// ─── حجم أيقونة الهوتسبوت الثابت ───
+const ICON_SIZE = 40
+
 export default function DebugBuildingPlacer({
   map,
   spot,
-  pos, // world position of the hotspot dot (x%, y% converted to px by parent)
-  setPos, // used ONLY to move the box via drag
-  anchor, // preset anchor from parent buttons { x, y }
+  pos,
+  setPos,
+  anchor,
   viewportRef,
   transformState,
 }) {
   const bw = Number(spot?.buildingW || 240)
   const bh = Number(spot?.buildingH || 240)
 
-  // ─── مصدر الحقيقة الوحيد ───
-  // boxOrigin = ركن الصندوق الأيسر العلوي في world space
-  // نحسبه مرة واحدة من pos + anchor الأولي
+  // ─── مصدر الحقيقة: ركن الصندوق الأيسر العلوي ───
   const [boxOrigin, setBoxOrigin] = useState(() => ({
     x: pos.worldX - (anchor?.x ?? 0.5) * bw,
     y: pos.worldY - (anchor?.y ?? 1) * bh,
   }))
 
-  // dot = النسبة (0-1) داخل الصندوق — مستقل تمامًا عن boxOrigin
+  // ─── مكان أيقونة الهوتسبوت (نقطة الـ x/y) ───
+  // نبدأ بنفس pos اللي بيجي من الـ parent
+  const [iconPos, setIconPos] = useState({ x: pos.worldX, y: pos.worldY })
+
+  // dot = anchor نسبي (0-1) داخل صندوق المبنى
   const [dot, setDot] = useState({ x: anchor?.x ?? 0.5, y: anchor?.y ?? 1 })
 
-  // refs للـ log (حل stale closure)
+  // هل الـ dot شغال دلوقتي (عشان نظهر المبنى)
+  const [isDraggingDot, setIsDraggingDot] = useState(false)
+
+  // refs
   const boxRef = useRef(boxOrigin)
   const dotRef = useRef(dot)
+  const iconRef = useRef(iconPos)
   useEffect(() => {
     boxRef.current = boxOrigin
   }, [boxOrigin])
   useEffect(() => {
     dotRef.current = dot
   }, [dot])
+  useEffect(() => {
+    iconRef.current = iconPos
+  }, [iconPos])
 
-  // sync preset anchor buttons من parent (بس بيغير dot، مش boxOrigin)
+  // sync preset anchor buttons (بس بيغير dot)
   const prevAnchorKey = useRef(`${anchor?.x}:${anchor?.y}`)
   useEffect(() => {
     const key = `${anchor?.x}:${anchor?.y}`
@@ -47,12 +59,9 @@ export default function DebugBuildingPlacer({
   }, [anchor?.x, anchor?.y])
 
   // ─── القيم المشتقة ───
-  // anchor point في العالم = boxOrigin + dot * size
-  const anchorWorldX = boxOrigin.x + dot.x * bw
-  const anchorWorldY = boxOrigin.y + dot.y * bh
-
-  const xPct = ((anchorWorldX / map.w) * 100).toFixed(3)
-  const yPct = ((anchorWorldY / map.h) * 100).toFixed(3)
+  // نقطة الـ x/y = مكان الأيقونة
+  const xPct = ((iconPos.x / map.w) * 100).toFixed(3)
+  const yPct = ((iconPos.y / map.h) * 100).toFixed(3)
 
   // ─── screen → world ───
   const toWorld = useCallback(
@@ -69,14 +78,12 @@ export default function DebugBuildingPlacer({
     [viewportRef, transformState],
   )
 
-  // ─── log (يقرأ من refs دايمًا) ───
+  // ─── log ───
   const log = useCallback(() => {
-    const b = boxRef.current
+    const ic = iconRef.current
     const d = dotRef.current
-    const ax = b.x + d.x * bw
-    const ay = b.y + d.y * bh
-    const xP = Number(((ax / map.w) * 100).toFixed(3))
-    const yP = Number(((ay / map.h) * 100).toFixed(3))
+    const xP = Number(((ic.x / map.w) * 100).toFixed(3))
+    const yP = Number(((ic.y / map.h) * 100).toFixed(3))
 
     const out = {
       name: spot?.name,
@@ -95,22 +102,26 @@ export default function DebugBuildingPlacer({
     console.log(JSON.stringify(out, null, 2))
   }, [map.w, map.h, spot?.name, spot?.id, bw, bh])
 
-  // ─── Drag BOX — يحرك boxOrigin بس، dot ماتغيرش ───
-  const onBoxDown = useCallback(
+  // ─── Drag ICON (يحدد x/y) ───
+  const onIconDown = useCallback(
     (e) => {
-      if (e.target.dataset.isDot) return // لو الضغطة على الـ dot، وديها للـ dot handler
       e.preventDefault()
       e.stopPropagation()
 
       const start = toWorld(e.clientX, e.clientY)
-      const snapDx = start.wx - boxRef.current.x
-      const snapDy = start.wy - boxRef.current.y
+      const grabDx = start.wx - iconRef.current.x
+      const grabDy = start.wy - iconRef.current.y
 
       const onMove = (ev) => {
         const cur = toWorld(ev.clientX, ev.clientY)
+        const nx = Math.max(0, Math.min(map.w, cur.wx - grabDx))
+        const ny = Math.max(0, Math.min(map.h, cur.wy - grabDy))
+        setIconPos({ x: nx, y: ny })
+
+        // المبنى يتبع الأيقونة مع الحفاظ على الـ anchor
         setBoxOrigin({
-          x: Math.max(-bw, Math.min(map.w, cur.wx - snapDx)),
-          y: Math.max(-bh * 0.5, Math.min(map.h, cur.wy - snapDy)),
+          x: nx - dotRef.current.x * bw,
+          y: ny - dotRef.current.y * bh,
         })
       }
 
@@ -126,25 +137,64 @@ export default function DebugBuildingPlacer({
     [toWorld, map.w, map.h, bw, bh, log],
   )
 
-  // ─── Drag DOT — يغير dot بس، boxOrigin ماتحركش ───
-  const onDotDown = useCallback(
+  // ─── Drag BOX (يحرك المبنى مستقلاً، الأيقونة تتبعه عند anchor) ───
+  const onBoxDown = useCallback(
     (e) => {
+      if (e.target.dataset.isDot) return
       e.preventDefault()
       e.stopPropagation()
 
-      // نلتقط boxOrigin في لحظة البدء ونخليه ثابت طول السحب
-      const frozenBox = { ...boxRef.current }
+      const start = toWorld(e.clientX, e.clientY)
+      const snapDx = start.wx - boxRef.current.x
+      const snapDy = start.wy - boxRef.current.y
 
       const onMove = (ev) => {
-        const { wx, wy } = toWorld(ev.clientX, ev.clientY)
-        // المؤشر نسبةً لركن الصندوق الثابت
-        setDot({
-          x: clamp01((wx - frozenBox.x) / bw),
-          y: clamp01((wy - frozenBox.y) / bh),
+        const cur = toWorld(ev.clientX, ev.clientY)
+        const nx = Math.max(-bw, Math.min(map.w, cur.wx - snapDx))
+        const ny = Math.max(-bh * 0.5, Math.min(map.h, cur.wy - snapDy))
+        setBoxOrigin({ x: nx, y: ny })
+        // الأيقونة تتبع نقطة الـ anchor داخل الصندوق
+        setIconPos({
+          x: nx + dotRef.current.x * bw,
+          y: ny + dotRef.current.y * bh,
         })
       }
 
       const onUp = () => {
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+        log()
+      }
+
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+    },
+    [toWorld, map.w, map.h, bw, bh, log],
+  )
+
+  // ─── Drag DOT (anchor فقط، الصندوق ثابت، الأيقونة تتحرك) ───
+  const onDotDown = useCallback(
+    (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDraggingDot(true)
+
+      const frozenBox = { ...boxRef.current }
+
+      const onMove = (ev) => {
+        const { wx, wy } = toWorld(ev.clientX, ev.clientY)
+        const nx = clamp01((wx - frozenBox.x) / bw)
+        const ny = clamp01((wy - frozenBox.y) / bh)
+        setDot({ x: nx, y: ny })
+        // الأيقونة تنتقل لنقطة الـ anchor الجديدة
+        setIconPos({
+          x: frozenBox.x + nx * bw,
+          y: frozenBox.y + ny * bh,
+        })
+      }
+
+      const onUp = () => {
+        setIsDraggingDot(false)
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
         log()
@@ -158,7 +208,7 @@ export default function DebugBuildingPlacer({
 
   return (
     <>
-      {/* ─── ghost box ─── */}
+      {/* ─── صندوق المبنى ─── */}
       <div
         onPointerDown={onBoxDown}
         className="pointer-events-auto"
@@ -168,15 +218,16 @@ export default function DebugBuildingPlacer({
           top: boxOrigin.y,
           width: bw,
           height: bh,
-          border: '2px dashed rgba(255,255,255,0.85)',
-          background: 'rgba(149,18,18,0.10)',
+          border: '2px dashed rgba(255,255,255,0.6)',
+          background: isDraggingDot ? 'rgba(0,0,0,0.05)' : 'rgba(149,18,18,0.08)',
           boxSizing: 'border-box',
           cursor: 'grab',
           zIndex: 999,
           overflow: 'visible',
+          transition: 'background 0.15s',
         }}
       >
-        {/* building preview */}
+        {/* صورة المبنى — تظهر دايمًا */}
         {spot?.buildingLoopSrc ? (
           <img
             src={spot.buildingLoopSrc}
@@ -193,12 +244,14 @@ export default function DebugBuildingPlacer({
               imageRendering: 'pixelated',
               userSelect: 'none',
               pointerEvents: 'none',
-              opacity: 0.95,
+              // شفافية خفيفة لما مش بتسحب، تظهر بالكامل لما بتحدد الـ anchor
+              opacity: isDraggingDot ? 0.97 : 0.8,
+              transition: 'opacity 0.15s',
             }}
           />
         ) : null}
 
-        {/* crosshair lines */}
+        {/* خطوط التقاطع */}
         <div
           style={{
             position: 'absolute',
@@ -206,7 +259,7 @@ export default function DebugBuildingPlacer({
             top: 0,
             width: 1,
             height: '100%',
-            background: 'rgba(250,204,21,0.4)',
+            background: 'rgba(250,204,21,0.5)',
             pointerEvents: 'none',
           }}
         />
@@ -217,12 +270,12 @@ export default function DebugBuildingPlacer({
             top: dot.y * bh,
             width: '100%',
             height: 1,
-            background: 'rgba(250,204,21,0.4)',
+            background: 'rgba(250,204,21,0.5)',
             pointerEvents: 'none',
           }}
         />
 
-        {/* draggable anchor dot */}
+        {/* dot الأصفر (anchor) */}
         <div
           data-is-dot="1"
           onPointerDown={onDotDown}
@@ -244,14 +297,85 @@ export default function DebugBuildingPlacer({
         />
       </div>
 
+      {/* ─── أيقونة الهوتسبوت (تحدد x/y) ─── */}
+      <div
+        onPointerDown={onIconDown}
+        title="Drag to set hotspot x/y position"
+        className="pointer-events-auto"
+        style={{
+          position: 'absolute',
+          left: iconPos.x - ICON_SIZE / 2,
+          top: iconPos.y - ICON_SIZE / 2,
+          width: ICON_SIZE,
+          height: ICON_SIZE,
+          zIndex: 1001,
+          cursor: 'move',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.8))',
+        }}
+      >
+        {/* لو في أيقونة هوتسبوت نعرضها، لو لأ نعرض دائرة بيضاء */}
+        {spot?.hotspotIdleSrc ? (
+          <img
+            src={spot.hotspotIdleSrc}
+            alt="hotspot"
+            draggable={false}
+            style={{
+              width: ICON_SIZE,
+              height: ICON_SIZE,
+              objectFit: 'contain',
+              imageRendering: 'pixelated',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          />
+        ) : (
+          // fallback لو مفيش أيقونة
+          <div
+            style={{
+              width: ICON_SIZE,
+              height: ICON_SIZE,
+              borderRadius: 999,
+              background: '#fff',
+              border: '3px solid rgba(250,204,21,0.9)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
+            }}
+          />
+        )}
+
+        {/* خط رابط من الأيقونة لنقطة الـ anchor */}
+        <svg
+          style={{
+            position: 'absolute',
+            top: ICON_SIZE / 2,
+            left: ICON_SIZE / 2,
+            overflow: 'visible',
+            pointerEvents: 'none',
+            zIndex: -1,
+          }}
+        >
+          <line
+            x1={0}
+            y1={0}
+            x2={boxOrigin.x + dot.x * bw - iconPos.x}
+            y2={boxOrigin.y + dot.y * bh - iconPos.y}
+            stroke="rgba(250,204,21,0.6)"
+            strokeWidth={1.5}
+            strokeDasharray="4 3"
+          />
+        </svg>
+      </div>
+
       {/* ─── HUD ─── */}
       <div
         className="pointer-events-none"
         style={{
           position: 'absolute',
           left: boxOrigin.x + 4,
-          top: boxOrigin.y - 24,
-          zIndex: 1000,
+          top: boxOrigin.y - 26,
+          zIndex: 1002,
           color: '#facc15',
           fontSize: 11,
           fontWeight: 700,
@@ -260,7 +384,7 @@ export default function DebugBuildingPlacer({
           whiteSpace: 'nowrap',
         }}
       >
-        x:{xPct}% y:{yPct}% │ anchorX:{dot.x.toFixed(3)} anchorY:{dot.y.toFixed(3)}
+        📍 x:{xPct}% y:{yPct}% │ anchorX:{dot.x.toFixed(3)} anchorY:{dot.y.toFixed(3)}
       </div>
     </>
   )

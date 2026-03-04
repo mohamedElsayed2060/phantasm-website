@@ -123,8 +123,6 @@ export default function ProjectDetailsScrollPanel({
   const gpUrl = String(project?.googlePlayUrl?.url || '').trim()
   const asImg = project?.appStoreUrl?.img ? imgUrl(project.appStoreUrl.img) : ''
   const asUrl = String(project?.appStoreUrl?.url || '').trim()
-
-  // scroll ref - محلي + بنمرره للـ parent لو طلبه
   const localRef = useRef(null)
   const setScrollRef = useCallback(
     (el) => {

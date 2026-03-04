@@ -9,10 +9,8 @@ export const ContactMessages: CollectionConfig = {
   },
 
   access: {
-    // ✅ أي حد يقدر يبعت
     create: () => true,
 
-    // ✅ القراءة للمسجلين فقط (admin)
     read: ({ req }) => !!req.user,
     update: ({ req }) => !!req.user,
     delete: ({ req }) => !!req.user,
@@ -26,7 +24,6 @@ export const ContactMessages: CollectionConfig = {
     { name: 'phone', type: 'text' },
     { name: 'message', type: 'textarea', required: true },
 
-    // مفيد للتتبع (اختياري)
     { name: 'userAgent', type: 'text' },
     { name: 'pageUrl', type: 'text' },
   ],
@@ -37,7 +34,6 @@ export const ContactMessages: CollectionConfig = {
         if (operation !== 'create') return
 
         try {
-          // ✅ هات recipient من شاشة message في Global home-dock لو موجود
           let recipient = process.env.CONTACT_RECIPIENT_EMAIL || '' // fallback env
 
           try {
@@ -72,14 +68,12 @@ export const ContactMessages: CollectionConfig = {
             `${doc?.message || ''}`,
           ].join('\n')
 
-          // ✅ يعتمد على email setup بتاع Payload عندكم
           await req.payload.sendEmail({
             to: recipient,
             subject,
             text,
           })
         } catch (e) {
-          // لو الإيميل فشل لأي سبب، الرسالة تفضل محفوظة في DB عادي
           console.error('ContactMessages email send failed:', e)
         }
       },

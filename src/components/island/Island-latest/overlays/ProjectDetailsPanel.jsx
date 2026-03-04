@@ -1,12 +1,16 @@
 'use client'
 
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import PixelFrameOverlay from '@/components/ui/PixelFrameOverlay'
 import PixelScrollTrack from '@/components/island/Island-latest/overlays/components/PixelScrollTrack'
 import PixelDivider from '@/components/island/Island-latest/overlays/components/PixelDivider'
 import useSplashRouter from '@/components/overlays/useSplashRouter'
-
+const sheetV = {
+  hidden: { y: 28, opacity: 0, filter: 'blur(6px)' },
+  show: { y: 0, opacity: 1, filter: 'blur(0px)', transition: { duration: 0.24 } },
+  exit: { y: 28, opacity: 0, filter: 'blur(6px)', transition: { duration: 0.18 } },
+}
 export default function ProjectDetailsPanel({
   open,
   placement = 'right', // 'right' | 'left' | 'top'
@@ -15,9 +19,8 @@ export default function ProjectDetailsPanel({
   width,
 }) {
   const splashRouter = useSplashRouter(750)
-  if (!open || !project) return null
 
-  const isMobileSheet = placement === 'top' // عندكم الموبايل بيرسل top
+  const isMobileSheet = placement === 'top'
   const panelW = width || (isMobileSheet ? '100%' : 560)
 
   // ✅ ESC يقفل
@@ -29,41 +32,50 @@ export default function ProjectDetailsPanel({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const go = () => {
-    const slug = project?.slug || project?.id
-    if (!slug) return
-    window.dispatchEvent(new CustomEvent('phantasm:splashStart', { detail: { minMs: 750 } }))
-    splashRouter.push(`/project-details/${slug}`)
-  }
+  const go = useCallback(
+    (newScrollTop) => {
+      const slug = project?.slug || project?.id
+      if (!slug) return
+      window.dispatchEvent(new CustomEvent('phantasm:splashStart', { detail: { minMs: 750 } }))
+      splashRouter.push(`/project-details/${slug}`)
+    },
+    [project, splashRouter],
+  )
 
   // Animations
-  const desktopV = {
-    hidden: {
-      opacity: 0,
-      x: placement === 'left' ? -12 : 12,
-      y: 0,
-      scale: 0.99,
-      filter: 'blur(6px)',
-    },
-    show: { opacity: 1, x: 0, y: 0, scale: 1, filter: 'blur(0px)', transition: { duration: 0.22 } },
-    exit: {
-      opacity: 0,
-      x: placement === 'left' ? -10 : 10,
-      scale: 0.99,
-      filter: 'blur(6px)',
-      transition: { duration: 0.18 },
-    },
-  }
 
-  const sheetV = {
-    hidden: { y: 28, opacity: 0, filter: 'blur(6px)' },
-    show: { y: 0, opacity: 1, filter: 'blur(0px)', transition: { duration: 0.24 } },
-    exit: { y: 28, opacity: 0, filter: 'blur(6px)', transition: { duration: 0.18 } },
-  }
+  const desktopV = useMemo(
+    () => ({
+      hidden: {
+        opacity: 0,
+        x: placement === 'left' ? -12 : 12,
+        y: 0,
+        scale: 0.99,
+        filter: 'blur(6px)',
+      },
+      show: {
+        opacity: 1,
+        x: 0,
+        y: 0,
+        scale: 1,
+        filter: 'blur(0px)',
+        transition: { duration: 0.22 },
+      },
+      exit: {
+        opacity: 0,
+        x: placement === 'left' ? -10 : 10,
+        scale: 0.99,
+        filter: 'blur(6px)',
+        transition: { duration: 0.18 },
+      },
+    }),
+    [placement],
+  )
+  if (!open || !project) return null
 
   return (
     <AnimatePresence>
-      {/* ✅ Mobile Bottom Sheet */}
+      {/* Mobile Bottom Sheet */}
       {isMobileSheet ? (
         <motion.div
           className="fixed inset-0 z-[95] pointer-events-auto"
@@ -107,7 +119,7 @@ export default function ProjectDetailsPanel({
           </motion.div>
         </motion.div>
       ) : (
-        /* ✅ Desktop side panel */
+        /*  Desktop side panel */
         <motion.div
           className="pointer-events-auto"
           style={{ width: panelW }}
@@ -143,13 +155,8 @@ function DetailsContent({ project, onGo }) {
     project?.panelIntro ||
     'HERE IS A INTRO FOR THE ISLAND AND MORE INTRO HERE IS A INTRO FOR THE ISLAND AND MORE INTRO...'
 
-  const images = Array.isArray(project?.images)
-    ? project.images.filter(Boolean)
-    : project?.previewImage
-      ? [project.previewImage]
-      : []
   const singleImage = project.singleImage
-  // ✅ Scroll plumbing for PixelScrollTrack
+  //  Scroll plumbing for PixelScrollTrack
   const scrollRef = useRef(null)
   const [scrollState, setScrollState] = useState({
     scrollTop: 0,
@@ -157,7 +164,7 @@ function DetailsContent({ project, onGo }) {
     clientHeight: 0,
   })
 
-  // ✅ heights (عدّلهم براحتك)
+  // heights
   const TEXT_MIN_H = 110
   const TEXT_MAX_H = 140
   const TRACK_H = TEXT_MAX_H
@@ -187,10 +194,9 @@ function DetailsContent({ project, onGo }) {
 
   const needsScroll = scrollState.scrollHeight > scrollState.clientHeight + 1
 
-  const handleScrollTo = (newScrollTop) => {
+  const handleScrollTo = useCallback((newScrollTop) => {
     if (scrollRef.current) scrollRef.current.scrollTop = newScrollTop
-  }
-
+  }, [])
   return (
     <div className="flex flex-col-reverse md:flex-row gap-0 md:items-stretch">
       {/* LEFT: text */}
@@ -201,7 +207,7 @@ function DetailsContent({ project, onGo }) {
 
         <PixelDivider align="start" color="#5C3131" height={2} className="my-3" />
 
-        {/* ✅ text area + pixel scrollbar */}
+        {/*  text area + pixel scrollbar */}
         <div className="flex items-start gap-[6px]">
           <div
             ref={scrollRef}
@@ -219,7 +225,6 @@ function DetailsContent({ project, onGo }) {
               WebkitOverflowScrolling: 'touch',
             }}
           >
-            <style>{`.pd-text::-webkit-scrollbar{display:none}`}</style>
             <div className="pd-text text-white/90 text-[11px] leading-[1.7] tracking-[0.12em] uppercase whitespace-pre-wrap">
               {text}
             </div>
@@ -259,11 +264,10 @@ function DetailsContent({ project, onGo }) {
       <div className="w-full p-[2px] pr-[5px] md:basis-[42%] md:flex-none flex rounded-t-2xl md:rounded-r-2xl bg-white items-center justify-center">
         {singleImage ? (
           <div className="w-full h-full flex items-center justify-center">
-            {/* ✅ صورة واحدة تملا المساحة */}
             <img
               src={singleImage}
               alt={title}
-              className="w-full h-full max-h-[220px] md:max-h-[999px] object-contain drop-shadow-xl"
+              className="w-full h-full max-h-[220px] md:max-h-[999px] object-contain"
               draggable={false}
             />
           </div>

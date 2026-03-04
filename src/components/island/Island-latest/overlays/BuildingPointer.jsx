@@ -1,36 +1,37 @@
 'use client'
 
 import React from 'react'
-
-export default function BuildingPointer({ placement = 'top' }) {
-  const isTop = placement === 'top'
-  const isRight = placement === 'right'
-  const isLeft = placement === 'left'
-
-  const style = {
+const PLACEMENT_STYLES = {
+  top: {
     position: 'absolute',
     pointerEvents: 'none',
     filter: 'drop-shadow(0 6px 14px rgba(0,0,0,.45))',
     opacity: 0.95,
-  }
-
-  if (isTop) {
-    // تحت البوب أوفر
-    style.left = '50%'
-    style.top = '100%'
-    style.transform = 'translate(-50%, 10px)'
-  } else if (isRight) {
-    // على شمال البوب أوفر (بيشاور لليسار)
-    style.left = 0
-    style.top = '50%'
-    style.transform = 'translate(-70%, -50%) rotate(90deg)'
-  } else if (isLeft) {
-    // على يمين البوب أوفر (بيشاور لليمين)
-    style.right = 0
-    style.top = '50%'
-    style.transform = 'translate(70%, -50%) rotate(-90deg)'
-  }
-
+    left: '50%',
+    top: '100%',
+    transform: 'translate(-50%, 10px)',
+  },
+  right: {
+    position: 'absolute',
+    pointerEvents: 'none',
+    filter: 'drop-shadow(0 6px 14px rgba(0,0,0,.45))',
+    opacity: 0.95,
+    left: 0,
+    top: '50%',
+    transform: 'translate(-70%, -50%) rotate(90deg)',
+  },
+  left: {
+    position: 'absolute',
+    pointerEvents: 'none',
+    filter: 'drop-shadow(0 6px 14px rgba(0,0,0,.45))',
+    opacity: 0.95,
+    right: 0,
+    top: '50%',
+    transform: 'translate(70%, -50%) rotate(-90deg)',
+  },
+}
+export default function BuildingPointer({ placement = 'top' }) {
+  const style = PLACEMENT_STYLES[placement] ?? PLACEMENT_STYLES.top
   return (
     <div style={style}>
       <svg

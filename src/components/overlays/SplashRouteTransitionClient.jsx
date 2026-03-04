@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation'
 import SplashOverlay from './SplashOverlay'
 
 export default function SplashRouteTransitionClient({
-  defaultMinMs = 1850, // ✅ زوّدها براحتك
-  holdAfterReadyMs = 300, // ✅ “زيادة صغيرة” بعد ما الداتا/الروت جاهز
+  defaultMinMs = 1850, // ✅ increased default min duration for better UX, especially on slower devices
+  holdAfterReadyMs = 300, // ✅ extra hold time after route is ready to ensure splash doesn't flash too quickly
   logoUrl = 'logo.gif',
   companyName = 'PHANTASM',
   initialOnMount = true,

@@ -31,16 +31,6 @@ function mapProjectCard(p) {
   }
 }
 
-// {
-//   "name": "Circus",
-//   "id": "698fa4b570685c3cf968d503",
-//   "x": 31.563,
-//   "y": 58.164,
-//   "anchorX": 0.507,
-//   "anchorY": 0.469,
-//   "buildingW": 120,
-//   "buildingH": 120
-// }
 export async function getIslandScene() {
   try {
     const g = await fetchJSONServer('/api/globals/islandScene?depth=2', {

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import ProjectsPopover from './ProjectsPopover'
 import BuildingPointer from './BuildingPointer'
@@ -13,7 +13,7 @@ const POPOVER_W = 360
 const POPOVER_H = 170
 const GAP = 5
 const MARGIN = 14
-const DETAILS_W = 560 // لازم يطابق ستايل Panel اللي عندك (أنت عامل 560 على الديسكتوب)
+const DETAILS_W = 560
 
 function isMobile(viewW) {
   return viewW < 768
@@ -27,17 +27,9 @@ function getPopoverDims(viewW, viewH, overlayPopW) {
   return { w, h }
 }
 
-/**
- * ✅ اختيار placement آمن + clamp للـ popover بحيث يفضل جوه الشاشة
- * - يحاول يلتزم بالـ preferred (overlay.placement) لو ينفع
- * - لو مفيش مساحة، يقلب لمكان تاني
- * - في الآخر يعمل clamp نهائي
- */
 function computeDockPosition({ preferredPlacement, anchorX, anchorY, popW, popH, vw, vh }) {
   const margin = MARGIN
   const gap = GAP
-
-  // candidates بترتيب: preferred ثم باقي الأماكن
   const order = (() => {
     const all = ['top', 'bottom', 'right', 'left']
     const pref = preferredPlacement && all.includes(preferredPlacement) ? preferredPlacement : 'top'
@@ -45,11 +37,6 @@ function computeDockPosition({ preferredPlacement, anchorX, anchorY, popW, popH,
   })()
 
   const make = (placement) => {
-    // dockStyle will use transforms:
-    // top: translate(-50%, -100%)  => left=anchorX, top=anchorY-gap
-    // bottom: translate(-50%, 0%)  => left=anchorX, top=anchorY+gap
-    // right: translate(0%, -50%)   => left=anchorX+gap, top=anchorY
-    // left: translate(-100%, -50%) => left=anchorX-gap, top=anchorY
     if (placement === 'top') {
       return { placement, left: anchorX, top: anchorY - gap }
     }
@@ -63,7 +50,6 @@ function computeDockPosition({ preferredPlacement, anchorX, anchorY, popW, popH,
   }
 
   const fits = (placement, left, top) => {
-    // نحسب الـ rect النهائي بعد transform لكل placement
     let rectLeft = 0
     let rectTop = 0
 
@@ -91,8 +77,6 @@ function computeDockPosition({ preferredPlacement, anchorX, anchorY, popW, popH,
       rectBottom <= vh - margin
     )
   }
-
-  // 1) اختار أول placement يfit بالكامل
   let chosen = null
   for (const pl of order) {
     const p = make(pl)
@@ -102,11 +86,8 @@ function computeDockPosition({ preferredPlacement, anchorX, anchorY, popW, popH,
     }
   }
 
-  // 2) لو مفيش ولا واحد fit بالكامل، خذ preferred واعمل clamp قوي
   if (!chosen) chosen = make(order[0])
 
-  // 3) clamp نهائي لمكان الـ rect بحيث يفضل جوه viewport
-  // نحول (dock left/top + transform) إلى rect، نعمل clamp، ثم نرجّع dock left/top تاني
   let rectLeft = 0
   let rectTop = 0
 
@@ -128,7 +109,6 @@ function computeDockPosition({ preferredPlacement, anchorX, anchorY, popW, popH,
   rectLeft = clamp(rectLeft, margin, vw - margin - popW)
   rectTop = clamp(rectTop, margin, vh - margin - popH)
 
-  // رجّع dock left/top بما يناسب transform
   let dockLeft = chosen.left
   let dockTop = chosen.top
 
@@ -166,7 +146,6 @@ export default function ProjectsOverlay({
   player,
 }) {
   useEffect(() => {
-    // ✅ lock/unlock حسب open
     try {
       window.dispatchEvent(
         new CustomEvent('phantasm:overlayLock', {
@@ -175,7 +154,6 @@ export default function ProjectsOverlay({
       )
     } catch {}
 
-    // ✅ لو الـ overlay اتشال/unmount لأي سبب → فك القفل
     return () => {
       try {
         window.dispatchEvent(
@@ -189,16 +167,17 @@ export default function ProjectsOverlay({
 
   useLockIslandGestures(open)
 
-  if (!open || !overlay) return null
-
   const mobile = isMobile(view.w)
 
-  const { w: popW, h: popH } = getPopoverDims(view.w, view.h, overlay.popW)
+  const { w: popW, h: popH } = overlay
+    ? getPopoverDims(view.w, view.h, overlay.popW)
+    : { w: POPOVER_W, h: POPOVER_H }
 
-  // ✅ احسب placement + dock left/top بحيث يفضل جوه viewport
   const dockPos = useMemo(() => {
+    if (!overlay) return { placement: 'top', left: 0, top: 0 }
+
     return computeDockPosition({
-      preferredPlacement: overlay.placement, // كان عندك top/right/left — هنقبل bottom كمان
+      preferredPlacement: overlay.placement,
       anchorX: overlay.left,
       anchorY: overlay.top,
       popW,
@@ -206,10 +185,12 @@ export default function ProjectsOverlay({
       vw: view.w,
       vh: view.h,
     })
-  }, [overlay.left, overlay.top, overlay.placement, popW, popH, view.w, view.h])
+  }, [overlay?.left, overlay?.top, overlay?.placement, popW, popH, view.w, view.h])
 
   // ✅ base position of the whole DOCK (list + details)
   const dockStyle = useMemo(() => {
+    if (!overlay) return { placement: 'top', left: 0, top: 0 }
+
     const base = {
       position: 'absolute',
       left: dockPos.left,
@@ -221,7 +202,6 @@ export default function ProjectsOverlay({
 
     if (placement === 'top') {
       base.transform = 'translate(-50%, -100%)'
-      // بزيادة أمان (خصوصًا لو popW اتغير)
       base.left = clampToViewportX(dockPos.left, view.w, popW, MARGIN)
     } else if (placement === 'bottom') {
       base.transform = 'translate(-50%, 0%)'
@@ -237,8 +217,9 @@ export default function ProjectsOverlay({
 
   const placement = dockPos.placement
 
-  // ✅ list rect in viewport coords (we use it ONLY for details positioning)
   const listRect = useMemo(() => {
+    if (!overlay) return { placement: 'top', left: 0, top: 0 }
+
     const listLeft =
       placement === 'top' || placement === 'bottom'
         ? dockStyle.left - popW / 2
@@ -263,10 +244,11 @@ export default function ProjectsOverlay({
     }
   }, [placement, dockStyle.left, dockPos.top, popW, popH])
 
-  // ✅ choose best placement for details around list, always stay in viewport
   const detailsPlacementAndStyle = useMemo(() => {
+    if (!overlay) return { placement: 'top', left: 0, top: 0 }
+
     if (mobile) {
-      return { placement: 'top', style: null } // الموبايل: sheet
+      return { placement: 'top', style: null }
     }
 
     const w = DETAILS_W
@@ -291,7 +273,7 @@ export default function ProjectsOverlay({
     const clampedTop = clamp(chosen.top, MARGIN, vh - MARGIN - h)
 
     return {
-      placement: chosen.placement === 'left' ? 'left' : 'right', // الأنيميشن left/right فقط
+      placement: chosen.placement === 'left' ? 'left' : 'right',
       style: {
         position: 'fixed',
         left: clampedLeft,
@@ -303,22 +285,25 @@ export default function ProjectsOverlay({
     }
   }, [mobile, view.w, view.h, listRect])
 
-  const handleProjectClick = (p) => {
-    onCloseDetails?.()
-    onCloseDialog?.() // ✅ يقفل building dialog لو مفتوح
-    onProjectPick?.(p) // ✅ يفتح panel مباشرة
-  }
+  const handleProjectClick = useCallback(
+    (p) => {
+      onCloseDetails?.()
+      onCloseDialog?.()
+      onProjectPick?.(p)
+    },
+    [onCloseDetails, onCloseDialog, onProjectPick],
+  )
+  if (!open || !overlay) return null
 
   return (
     <div className="fixed inset-0 z-[120]">
-      {/* ✅ backdrop يمنع drag/zoom + يقفل الليست */}
       <div
         className="absolute inset-0"
         style={{ background: 'rgba(0,0,0,.18)' }}
         onClick={() => onCloseList?.()}
       />
 
-      {/* ✅ DOCK */}
+      {/* DOCK */}
       <div style={dockStyle} onClick={(e) => e.stopPropagation()}>
         <AnimatePresence>
           <motion.div
@@ -331,7 +316,7 @@ export default function ProjectsOverlay({
           >
             <ProjectsPopover
               title={overlay.spot.name}
-              categoryTitle={overlay.spot.projectCategoryTitle || ''} // ✅
+              categoryTitle={overlay.spot.projectCategoryTitle || ''}
               projects={overlay.spot.projects || []}
               placement={placement}
               activeProjectId={activeProject?.id}
@@ -345,7 +330,7 @@ export default function ProjectsOverlay({
         </AnimatePresence>
       </div>
 
-      {/* ✅ DETAILS PANEL */}
+      {/*  DETAILS PANEL */}
       {detailsOpen ? (
         mobile ? (
           <ProjectDetailsPanel
@@ -368,19 +353,14 @@ export default function ProjectsOverlay({
         )
       ) : null}
 
-      {/* ✅ DIALOG */}
+      {/* DIALOG */}
       {dialogOpen ? (
         <div
           className="absolute left-1/2 bottom-4 -translate-x-1/2 pointer-events-auto"
           style={{ width: 'min(820px, calc(100vw - 24px))' }}
           onClick={(e) => e.stopPropagation()}
         >
-          <BuildingDialogPanel
-            open
-            spot={overlay.spot} // ✅ المبنى نفسه
-            player={player}
-            onClose={onCloseDialog}
-          />
+          <BuildingDialogPanel open spot={overlay.spot} player={player} onClose={onCloseDialog} />
           <div className="flex justify-center mt-2 opacity-80">
             <div className="h-1 w-16 rounded-full bg-white/25" />
           </div>

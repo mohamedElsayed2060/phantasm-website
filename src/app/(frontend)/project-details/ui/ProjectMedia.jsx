@@ -46,7 +46,7 @@ export default function ProjectMedia({ project }) {
                   ratio="16/10"
                   contain
                   priority={idx === 0}
-                  className="drop-shadow-xl"
+                  className=""
                 />
               </SplideSlide>
             ))}

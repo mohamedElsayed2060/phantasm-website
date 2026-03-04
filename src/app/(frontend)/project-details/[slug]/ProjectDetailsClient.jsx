@@ -40,7 +40,6 @@ export default function ProjectDetailsClient({ project }) {
           {/* RIGHT: scroll panel ALWAYS full height */}
           <div className="bg-black h-full flex items-center justify-center">
             <div className="w-full h-full p-6">
-              {/* ✅ خلي panel ياخد طول الشاشة كله */}
               <ProjectDetailsScrollPanel project={data} maxHeightPx={panelH || 520} />
             </div>
           </div>
