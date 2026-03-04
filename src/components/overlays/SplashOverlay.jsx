@@ -31,14 +31,25 @@ export default function SplashOverlay({
       },
       Math.max(0, Number(minMs) || 0),
     )
-
+    try {
+      sessionStorage.removeItem('phantasm:splashClosed')
+    } catch {}
     return () => clearTimeout(t)
   }, [open, minMs, onMinDone])
 
   const show = !!open
 
   return (
-    <AnimatePresence>
+    <AnimatePresence
+      onExitComplete={() => {
+        try {
+          sessionStorage.setItem('phantasm:splashClosed', '1')
+        } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent('phantasm:splashClosed'))
+        } catch {}
+      }}
+    >
       {show ? (
         <motion.div
           key="splash"
@@ -46,7 +57,7 @@ export default function SplashOverlay({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black"
+          className="fixed inset-0 z-[10050] flex items-center justify-center bg-black"
           style={{
             backgroundImage: 'url(/intro.png)',
             backgroundRepeat: 'no-repeat',

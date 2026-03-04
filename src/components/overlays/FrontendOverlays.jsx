@@ -19,7 +19,7 @@ export default function FrontendOverlays({ globals }) {
   const isHome = pathname === '/'
 
   const [locks, setLocks] = useState({})
-
+  const [splashClosed, setSplashClosed] = useState(false)
   useEffect(() => {
     const onLock = (e) => {
       const key = e?.detail?.key
@@ -31,15 +31,32 @@ export default function FrontendOverlays({ globals }) {
     window.addEventListener('phantasm:overlayLock', onLock)
     return () => window.removeEventListener('phantasm:overlayLock', onLock)
   }, [])
+  useEffect(() => {
+    const sync = () => {
+      let closed = false
+      try {
+        closed = sessionStorage.getItem('phantasm:splashClosed') === '1'
+      } catch {}
+      setSplashClosed(closed)
+    }
 
+    sync()
+
+    const onClosed = () => setSplashClosed(true)
+    window.addEventListener('phantasm:splashClosed', onClosed)
+    return () => window.removeEventListener('phantasm:splashClosed', onClosed)
+  }, [])
   const anyOverlayLocked = Object.values(locks).some(Boolean)
   const isProjectsOpen = Boolean(locks?.projects)
 
   useLockIslandGestures(anyOverlayLocked && isHome)
   useLockPageZoom(true)
+
+  const allowAvatarGate = splashClosed
+
   return (
     <>
-      <AvatarGate config={playerSelection} allowOpen={true} />
+      <AvatarGate config={playerSelection} allowOpen={allowAvatarGate} />
       <HomeDockOverlay config={homeDock} allowOpen={!isProjectsOpen} />
     </>
   )

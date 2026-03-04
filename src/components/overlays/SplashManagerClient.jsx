@@ -1,3 +1,4 @@
+// src/components/overlays/SplashManagerClient.jsx
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
@@ -25,7 +26,7 @@ export default function SplashManagerClient({
   const forceCloseTimerRef = useRef(null)
   const handedOffRef = useRef(false)
 
-  const modeRef = useRef('boot') // boot | nav
+  const modeRef = useRef('boot')
   const cleanupReadyRef = useRef(() => {})
   const clickNavArmedRef = useRef(false)
 
@@ -37,30 +38,15 @@ export default function SplashManagerClient({
     } catch {}
     cleanupReadyRef.current = () => {}
   }
-  const cleanupRefreshOnly = () => {
-    // ما تلمسش closeTimerRef هنا
-    try {
-      cleanupReadyRef.current?.()
-    } catch {}
-    cleanupReadyRef.current = () => {}
 
-    if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
-    forceCloseTimerRef.current = null
-  }
   const scheduleClose = () => {
-    console.log('scheduleClose called', {
-      ready: readyRef.current,
-      elapsed: Date.now() - openedAtRef.current,
-    })
-
     if (!readyRef.current) return
     const elapsed = Date.now() - (openedAtRef.current || Date.now())
     const remaining = Math.max(0, minMs - elapsed)
     const wait = remaining + Math.max(0, holdMs)
-    console.log('will close in ms:', wait)
+
     clearClose()
     closeTimerRef.current = setTimeout(() => {
-      console.log('setOpen(false) firing')
       setOpen(false)
     }, wait)
   }
@@ -81,9 +67,10 @@ export default function SplashManagerClient({
     setOpen(true)
   }
 
-  const waitForBootReady = () => {
+  // ✅ تعديل: انتظر sceneReady بدلاً من bootReady
+  const waitForIslandReady = () => {
     try {
-      if (sessionStorage.getItem('phantasm:bootReady') === '1') {
+      if (sessionStorage.getItem('phantasm:sceneReady') === '1') {
         readyRef.current = true
         scheduleClose()
         if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
@@ -93,17 +80,17 @@ export default function SplashManagerClient({
     } catch {}
 
     const onReady = () => {
-      window.removeEventListener('phantasm:bootReady', onReady)
+      window.removeEventListener('phantasm:sceneReady', onReady)
       readyRef.current = true
       scheduleClose()
       if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
       forceCloseTimerRef.current = null
     }
-    window.addEventListener('phantasm:bootReady', onReady)
-    cleanupReadyRef.current = () => window.removeEventListener('phantasm:bootReady', onReady)
+    window.addEventListener('phantasm:sceneReady', onReady)
+    cleanupReadyRef.current = () => window.removeEventListener('phantasm:sceneReady', onReady)
   }
 
-  // 1) SSR -> Client handoff (refresh)
+  // 1) SSR -> Client handoff
   useEffect(() => {
     if (handedOffRef.current) return
     handedOffRef.current = true
@@ -132,7 +119,7 @@ export default function SplashManagerClient({
     }, maxWaitMs)
 
     if (window.location.pathname === '/') {
-      waitForBootReady()
+      waitForIslandReady() //️ استدعاء المعدّل
     } else {
       readyRef.current = true
       scheduleClose()
@@ -141,7 +128,6 @@ export default function SplashManagerClient({
     }
 
     return () => {
-      cleanupRefreshOnly()
       if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -158,7 +144,7 @@ export default function SplashManagerClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 3) pathname changes (push + back/forward)
+  // 3) pathname changes
   const lastPathRef = useRef(pathname)
   useEffect(() => {
     const prev = lastPathRef.current
@@ -177,7 +163,7 @@ export default function SplashManagerClient({
     if (modeRef.current === 'nav') {
       clickNavArmedRef.current = false
       if (pathname === '/') {
-        waitForBootReady()
+        waitForIslandReady() //️ استدعاء المعدّل
       } else {
         readyRef.current = true
         scheduleClose()
@@ -187,7 +173,8 @@ export default function SplashManagerClient({
 
     // boot mode route change (rare)
     if (modeRef.current === 'boot') {
-      if (pathname === '/') waitForBootReady()
+      if (pathname === '/')
+        waitForIslandReady() //️ استدعاء المعدّل
       else {
         readyRef.current = true
         scheduleClose()

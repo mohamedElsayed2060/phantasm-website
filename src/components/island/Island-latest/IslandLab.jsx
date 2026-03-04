@@ -443,6 +443,10 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
       ...ambientUrls,
     ]).finally(() => {
       setSceneReady(true)
+      try {
+        sessionStorage.setItem('phantasm:sceneReady', '1')
+        window.dispatchEvent(new CustomEvent('phantasm:sceneReady'))
+      } catch {}
     })
   }, [cmsReady, map.ready, view.w, view.h, reset])
   const blockCanvasInput = Boolean(overlayPos)
@@ -548,7 +552,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     <div
       ref={viewportRef}
       className="island-page fixed inset-0 bg-[#050505] overflow-hidden"
-      style={{ opacity: sceneReady ? 1 : 0 }}
+      // style={{ opacity: sceneReady ? 1 : 0 }}
     >
       {showLoading ? <div className="absolute inset-0 z-[200] bg-[#050505]" /> : null}
       {SHOW_DEV ? (

@@ -2,10 +2,8 @@
 import './frontend.css'
 import { getFrontendGlobals } from '@/lib/cms'
 import FrontendOverlays from '@/components/overlays/FrontendOverlays'
-import SplashRouteTransitionClient from '@/components/overlays/SplashRouteTransitionClient'
-import PageTransition from '@/components/motion/PageTransition'
-import SsrSplashHider from '@/components/overlays/SsrSplashHider'
 import SplashManagerClient from '@/components/overlays/SplashManagerClient'
+
 export const dynamic = 'force-dynamic'
 export const metadata = {
   title: {
@@ -15,18 +13,16 @@ export const metadata = {
   description:
     'We specialise in creating engaging games and software applications that bring your ideas to life.',
 }
+
 export default async function FrontendLayout({ children }) {
   const globals = await getFrontendGlobals()
 
-  const logoUrl = '/logo.gif'
-  const companyName = 'PHANTASM'
-
   return (
     <div className="min-h-screen silkscreen-font bg-black text-white overflow-hidden relative">
-      {/* ✅ SSR splash shell (shows BEFORE hydration) to avoid "content -> splash -> content" flash */}
+      {/* SSR splash shell */}
       <div
         id="ssr-splash"
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black"
+        className="fixed inset-0 z-[10050] flex items-center justify-center bg-black"
         style={{
           backgroundImage: 'url(/intro.png)',
           backgroundRepeat: 'no-repeat',
@@ -48,11 +44,13 @@ export default async function FrontendLayout({ children }) {
           </div>
         </div>
       </div>
-      {/* ✅ remove SSR splash after minimum time */}
+
+      {/* ✅ Splash manager فقط */}
       <SplashManagerClient />
       <FrontendOverlays globals={globals} />
-      {/* ✅ Page enter/exit animation لكل الصفحات */}
-      <PageTransition>{children}</PageTransition>{' '}
+
+      {/* ✅ مباشرة بدون PageTransition */}
+      {children}
     </div>
   )
 }

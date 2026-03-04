@@ -1,6 +1,11 @@
 /* src/app/globals.css */
-/* ✅ Minimal global styles shared across app (admin + frontend) */
 html,
 body {
   height: 100%;
+  background: #000; /* ✅ يمنع الwhite flash */
+  color: #fff;
+}
+
+body {
+  margin: 0;
 }
