@@ -3,6 +3,34 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+function waitForCurtainClosed(timeoutMs = 1200) {
+  return new Promise((resolve) => {
+    let done = false
+
+    const finish = () => {
+      if (done) return
+      done = true
+      cleanup()
+      resolve()
+    }
+
+    const onClosed = () => finish()
+
+    const cleanup = () => {
+      try {
+        window.removeEventListener('phantasm:curtainClosed', onClosed)
+      } catch {}
+      clearTimeout(t)
+    }
+
+    try {
+      window.addEventListener('phantasm:curtainClosed', onClosed, { once: true })
+    } catch {}
+
+    const t = setTimeout(() => finish(), timeoutMs)
+  })
+}
+
 export default function SplashLink({
   href,
   children,
@@ -15,7 +43,7 @@ export default function SplashLink({
 }) {
   const router = useRouter()
 
-  const handleClick = (e) => {
+  const handleClick = async (e) => {
     onClick?.(e)
     if (e.defaultPrevented) return
 
@@ -26,6 +54,8 @@ export default function SplashLink({
     e.preventDefault()
 
     window.dispatchEvent(new CustomEvent('phantasm:splashStart', { detail: { minMs } }))
+
+    await waitForCurtainClosed()
 
     if (replace) router.replace(href)
     else router.push(href)

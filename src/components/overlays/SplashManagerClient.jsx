@@ -1,7 +1,6 @@
-// src/components/overlays/SplashManagerClient.jsx
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import SplashOverlay from './SplashOverlay'
 
@@ -19,13 +18,13 @@ export default function SplashManagerClient({
   const holdMs = Number.isFinite(ENV_HOLD) && ENV_HOLD >= 0 ? ENV_HOLD : holdAfterReadyMs
 
   const [open, setOpen] = useState(true)
+  const [isInstant, setIsInstant] = useState(true) // للتحكم في نوع الدخول (مقفول جاهز أم حركة قفل)
 
   const openedAtRef = useRef(Date.now())
   const readyRef = useRef(false)
   const closeTimerRef = useRef(null)
   const forceCloseTimerRef = useRef(null)
   const handedOffRef = useRef(false)
-
   const modeRef = useRef('boot')
   const cleanupReadyRef = useRef(() => {})
   const clickNavArmedRef = useRef(false)
@@ -54,20 +53,22 @@ export default function SplashManagerClient({
   const openBoot = () => {
     clearClose()
     modeRef.current = 'boot'
+    setIsInstant(true) // في الريفريش، تظهر مقفولة فوراً
     openedAtRef.current = Date.now()
     readyRef.current = false
     setOpen(true)
   }
 
-  const openNav = (fromPath) => {
+  const openNav = (isBackAction = false) => {
     clearClose()
     modeRef.current = 'nav'
+    // لو back تظهر مقفولة فوراً، لو كليك عادي تقفل بـ أنيميشن
+    setIsInstant(isBackAction)
     openedAtRef.current = Date.now()
     readyRef.current = false
     setOpen(true)
   }
 
-  // ✅ تعديل: انتظر sceneReady بدلاً من bootReady
   const waitForIslandReady = () => {
     try {
       if (sessionStorage.getItem('phantasm:sceneReady') === '1') {
@@ -111,7 +112,6 @@ export default function SplashManagerClient({
 
     openBoot()
 
-    // ✅ safety: never hang on refresh
     if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
     forceCloseTimerRef.current = setTimeout(() => {
       readyRef.current = true
@@ -119,69 +119,63 @@ export default function SplashManagerClient({
     }, maxWaitMs)
 
     if (window.location.pathname === '/') {
-      waitForIslandReady() //️ استدعاء المعدّل
+      waitForIslandReady()
     } else {
       readyRef.current = true
       scheduleClose()
-      if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
-      forceCloseTimerRef.current = null
     }
 
     return () => {
       if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 2) clicks
+  // 2) استماع لأحداث الراوتر المخصص (Click Start)
   useEffect(() => {
     const onStart = () => {
       clickNavArmedRef.current = true
-      openNav()
+      openNav(false) // انيميشن القفل (لأن المستخدم هو اللي داس)
     }
     window.addEventListener('phantasm:splashStart', onStart)
     return () => window.removeEventListener('phantasm:splashStart', onStart)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 3) pathname changes
+  // 3) مراقبة تغيير الـ Pathname
   const lastPathRef = useRef(pathname)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const prev = lastPathRef.current
     if (pathname === prev) return
     lastPathRef.current = pathname
 
-    // back/forward (route changed without SplashLink)
+    // Back/Forward (browser) — لازم يتعمل قبل الـ paint
     if (!open && !clickNavArmedRef.current) {
-      openNav(prev)
+      openNav(true) // instant closed
       readyRef.current = true
       scheduleClose()
       return
     }
 
-    // click nav route landed
+    // Click navigation landed
     if (modeRef.current === 'nav') {
       clickNavArmedRef.current = false
-      if (pathname === '/') {
-        waitForIslandReady() //️ استدعاء المعدّل
-      } else {
+      if (pathname === '/') waitForIslandReady()
+      else {
         readyRef.current = true
         scheduleClose()
       }
       return
     }
 
-    // boot mode route change (rare)
+    // Boot mode route change
     if (modeRef.current === 'boot') {
-      if (pathname === '/')
-        waitForIslandReady() //️ استدعاء المعدّل
+      if (pathname === '/') waitForIslandReady()
       else {
         readyRef.current = true
         scheduleClose()
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname])
+  }, [pathname, open])
 
-  return <SplashOverlay open={open} minMs={minMs} noFadeInInitial />
+  return <SplashOverlay open={open} isInstant={isInstant} />
 }

@@ -1,102 +1,96 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+
+const EASE_IN = [0.4, 0, 0.2, 1] // close (nice)
+const EASE_OUT = [0.4, 0, 1, 1] // open (snappier)
 
 export default function SplashOverlay({
   open = false,
-  minMs = 520,
   logoUrl = '/logo.gif',
   companyName = 'PHANTASM',
-  onMinDone,
-  noFadeInInitial = false,
+  isInstant = false,
 }) {
-  const [minDone, setMinDone] = useState(false)
-  const startRef = useRef(0)
+  // نفس فكرة الموبايل لكن على الكل:
+  // - initial: لو instant => مقفول جاهز (clip 0)
+  //            لو لا => يبدأ مفتوح (clip من النص) ثم يقفل
+  // - animate: يقفل بالكامل
+  // - exit: يفتح للأطراف (يرجع clip للنص)
 
-  useEffect(() => {
-    if (!open) {
-      setMinDone(false)
-      startRef.current = 0
-      return
-    }
-
-    startRef.current = Date.now()
-    setMinDone(false)
-
-    const t = setTimeout(
-      () => {
-        setMinDone(true)
-        onMinDone?.()
-      },
-      Math.max(0, Number(minMs) || 0),
-    )
-    try {
-      sessionStorage.removeItem('phantasm:splashClosed')
-    } catch {}
-    return () => clearTimeout(t)
-  }, [open, minMs, onMinDone])
-
-  const show = !!open
+  const curtainVariants = {
+    initial: (instant) => ({
+      clipPath: instant ? 'inset(0% 0% 0% 0%)' : 'inset(0% 50% 0% 50%)',
+    }),
+    animate: {
+      clipPath: 'inset(0% 0% 0% 0%)',
+      transition: { duration: 0.7, ease: EASE_IN },
+    },
+    exit: {
+      clipPath: 'inset(0% 50% 0% 50%)',
+      transition: { duration: 0.8, ease: EASE_OUT },
+    },
+  }
 
   return (
-    <AnimatePresence
-      onExitComplete={() => {
-        try {
-          sessionStorage.setItem('phantasm:splashClosed', '1')
-        } catch {}
-        try {
-          window.dispatchEvent(new CustomEvent('phantasm:splashClosed'))
-        } catch {}
-      }}
-    >
-      {show ? (
+    <AnimatePresence mode="wait">
+      {open && (
         <motion.div
-          key="splash"
-          initial={noFadeInInitial ? { opacity: 1 } : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-[10050] flex items-center justify-center bg-black"
-          style={{
-            backgroundImage: 'url(/intro.png)',
-            backgroundRepeat: 'no-repeat',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
+          key="splash-screen"
+          className="fixed inset-0 z-[10050] flex items-center justify-center overflow-hidden"
         >
-          <div className="flex flex-col items-center gap-4">
-            {/* Logo */}
-            {/* <motion.img
+          {/* dim + blur */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/35 backdrop-blur-2xl"
+          />
+          <div className="absolute inset-0 z-[15] pointer-events-none bg-red-500/6" />
+          {/* ✅ صورة واحدة cover + clip-path animation */}
+          <motion.div
+            custom={isInstant}
+            variants={curtainVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="absolute inset-0 z-10"
+            style={{
+              backgroundImage: 'url(/intro-82.jpg)',
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              willChange: 'clip-path, filter, transform',
+              // filter: 'blur(1px)', // ✅ بلور خفيف جدًا
+              // transform: 'scale(1.02)', // ✅ يمنع حواف البلور
+            }}
+          />
+
+          {/* Logo + loader */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="relative z-20 flex flex-col items-center gap-6"
+          >
+            <img
               src={logoUrl}
               alt={companyName}
+              className="w-[180px] md:w-[500px] h-auto select-none"
               draggable={false}
-              initial={{ scale: 0.98, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.22 }}
-              className="w-[140px] h-auto select-none"
               style={{ imageRendering: 'pixelated' }}
-            /> */}
+            />
 
-            {/* Text */}
-            {/* <div className="text-white/80 tracking-[0.24em] text-xs">{companyName}</div> */}
-
-            {/* tiny loader */}
-            <div className="mt-2 h-[2px] w-[160px] overflow-hidden bg-white/10 rounded">
+            <div className="h-[1px] w-[140px] md:w-[200px] overflow-hidden bg-white/10 rounded-full">
               <motion.div
-                className="h-full w-1/3 bg-white/60"
-                initial={{ x: '-120%' }}
-                animate={{ x: '320%' }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 0.9,
-                  ease: 'linear',
-                }}
+                className="h-full bg-white/60"
+                initial={{ x: '-100%' }}
+                animate={{ x: '100%' }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
               />
             </div>
-          </div>
+          </motion.div>
         </motion.div>
-      ) : null}
+      )}
     </AnimatePresence>
   )
 }
