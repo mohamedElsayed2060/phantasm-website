@@ -57,6 +57,9 @@ export default function SplashManagerClient({
     openedAtRef.current = Date.now()
     readyRef.current = false
     setOpen(true)
+    try {
+      sessionStorage.removeItem('phantasm:sceneReady')
+    } catch {}
   }
 
   const openNav = (isBackAction = false) => {
@@ -67,17 +70,15 @@ export default function SplashManagerClient({
     openedAtRef.current = Date.now()
     readyRef.current = false
     setOpen(true)
+    try {
+      sessionStorage.removeItem('phantasm:sceneReady')
+    } catch {}
   }
 
   const waitForIslandReady = () => {
+    // ✅ مهم: امسح أي ready قديم عشان مايقفلش بدري
     try {
-      if (sessionStorage.getItem('phantasm:sceneReady') === '1') {
-        readyRef.current = true
-        scheduleClose()
-        if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
-        forceCloseTimerRef.current = null
-        return
-      }
+      sessionStorage.removeItem('phantasm:sceneReady')
     } catch {}
 
     const onReady = () => {
@@ -87,6 +88,7 @@ export default function SplashManagerClient({
       if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
       forceCloseTimerRef.current = null
     }
+
     window.addEventListener('phantasm:sceneReady', onReady)
     cleanupReadyRef.current = () => window.removeEventListener('phantasm:sceneReady', onReady)
   }
