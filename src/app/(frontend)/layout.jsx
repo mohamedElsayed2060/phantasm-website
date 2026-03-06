@@ -43,7 +43,7 @@ export default async function FrontendLayout({ children }) {
 
         {/* ✅ dim + blur overlay (زي client) */}
         <div className="absolute inset-0 bg-black/35 backdrop-blur-2xl" />
-
+        {/* what happens */}
         {/* loader */}
         <div className="relative z-[10] flex flex-col items-center gap-6">
           <div className="h-[2px] w-[140px] md:w-[200px] overflow-hidden bg-white/10 rounded-full">
