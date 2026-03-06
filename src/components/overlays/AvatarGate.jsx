@@ -170,12 +170,15 @@ export default function AvatarGate({ config, allowOpen = true }) {
                                      bg-black/25 border-b border-white/15 overflow-hidden"
                             >
                               {img ? (
-                                <img
+                                <PremiumImage
                                   src={img}
                                   alt={p.name || 'player'}
-                                  draggable={false}
-                                  className="h-[150px] sm:h-[190px] w-auto"
-                                  style={{ imageRendering: 'pixelated' }}
+                                  ratio="1/1"
+                                  contain
+                                  skeleton={false}
+                                  pixelated
+                                  sizes="(max-width: 640px) 130px, 190px"
+                                  className="h-[150px] sm:h-[190px] w-[130px] sm:w-[190px]"
                                 />
                               ) : (
                                 <div className="text-white/40 text-xs">NO IMAGE</div>

@@ -6,6 +6,7 @@ import PixelFrameOverlay from '@/components/ui/PixelFrameOverlay'
 import PixelScrollTrack from '@/components/island/Island-latest/overlays/components/PixelScrollTrack'
 import PixelDivider from '@/components/island/Island-latest/overlays/components/PixelDivider'
 import useSplashRouter from '@/components/overlays/useSplashRouter'
+import PremiumImage from '@/components/ui/PremiumImage'
 const sheetV = {
   hidden: { y: 28, opacity: 0, filter: 'blur(6px)' },
   show: { y: 0, opacity: 1, filter: 'blur(0px)', transition: { duration: 0.24 } },
@@ -109,7 +110,14 @@ export default function ProjectDetailsPanel({
                 <div className="bg-[#2b1a1a]/95 relative">
                   {/* close */}
                   <div onClick={onClose} className="z-10 cursor-pointer absolute -top-3 -right-3">
-                    <img src="/close.png" alt="close" className="w-8 h-8" />
+                    <PremiumImage
+                      src="/close.png"
+                      alt="close"
+                      ratio="1/1"
+                      skeleton={false}
+                      sizes="32px"
+                      className="w-8 h-8"
+                    />
                   </div>
 
                   <DetailsContent project={project} onGo={go} />
@@ -137,7 +145,14 @@ export default function ProjectDetailsPanel({
           >
             <div className="bg-[#2A1616] rounded-xl relative">
               <div onClick={onClose} className="z-10 cursor-pointer absolute -top-3 -right-3">
-                <img src="/close.png" alt="close" className="w-8 h-8" />
+                <PremiumImage
+                  src="/close.png"
+                  alt="close"
+                  ratio="1/1"
+                  skeleton={false}
+                  sizes="32px"
+                  className="w-8 h-8"
+                />
               </div>
 
               <DetailsContent project={project} onGo={go} />
@@ -264,11 +279,14 @@ function DetailsContent({ project, onGo }) {
       <div className="w-full p-[2px] pr-[5px] md:basis-[42%] md:flex-none flex rounded-t-2xl md:rounded-r-2xl bg-white items-center justify-center">
         {singleImage ? (
           <div className="w-full h-full flex items-center justify-center">
-            <img
+            <PremiumImage
               src={singleImage}
               alt={title}
-              className="w-full h-full max-h-[220px] md:max-h-[999px] object-contain"
-              draggable={false}
+              ratio="16/10"
+              contain
+              sizes="(max-width: 768px) 90vw, 35vw"
+              className="w-full h-full"
+              imgClassName="max-h-[220px] md:max-h-[999px]"
             />
           </div>
         ) : (

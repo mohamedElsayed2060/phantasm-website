@@ -367,12 +367,15 @@ function TeamItem({ isActive, isHover, imgSrc, onEnter, onLeave, onClick, frameS
           style={{ backgroundColor: bg }}
         >
           {imgSrc ? (
-            <img
+            <PremiumImage
               src={imgSrc}
               alt="Avatar"
-              draggable={false}
-              className="h-full w-auto"
-              style={{ imageRendering: 'pixelated' }}
+              ratio="1/1"
+              contain
+              skeleton={false}
+              pixelated
+              className="w-full h-full"
+              imgClassName="h-full w-full"
             />
           ) : (
             <div className="text-[10px] opacity-70">Avatar</div>
@@ -382,3 +385,4 @@ function TeamItem({ isActive, isHover, imgSrc, onEnter, onLeave, onClick, frameS
     </div>
   )
 }
+

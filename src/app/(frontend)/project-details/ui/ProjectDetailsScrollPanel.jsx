@@ -6,6 +6,7 @@ import PixelScrollTrack from '@/components/island/Island-latest/overlays/compone
 import PixelDivider from '@/components/island/Island-latest/overlays/components/PixelDivider'
 import { imgUrl } from '@/lib/cms'
 import { LexicalRich } from './renderLexicalRich'
+import PremiumImage from '@/components/ui/PremiumImage'
 
 function SectionHeading({ children }) {
   return (
@@ -59,13 +60,15 @@ function StoreBadge({ imgSrc, url, disabled, alt }) {
       aria-disabled={disabled ? 'true' : 'false'}
     >
       {imgSrc ? (
-        <img
+        <PremiumImage
           src={imgSrc}
           alt={alt || ''}
-          className="h-[38px] sm:h-[42px] w-auto select-none rounded"
-          draggable={false}
-          decoding="async"
-          loading="eager"
+          ratio="160/48"
+          contain
+          skeleton={false}
+          sizes="160px"
+          className="w-[130px] sm:w-[150px]"
+          imgClassName="rounded"
         />
       ) : null}
     </a>
@@ -259,30 +262,30 @@ export default function ProjectDetailsScrollPanel({
                           <img
                             src={typeIcon1}
                             alt=""
+                            ratio="1/1"
+                            contain="true"
+                            skeleton="false"
                             className="w-4"
-                            draggable={false}
-                            decoding="async"
-                            loading="eager"
                           />
                         ) : null}
                         {typeIcon2 ? (
                           <img
                             src={typeIcon2}
                             alt=""
+                            ratio="1/1"
+                            contain="true"
+                            skeleton="false"
                             className="w-4"
-                            draggable={false}
-                            decoding="async"
-                            loading="eager"
                           />
                         ) : null}
                         {typeIcon3 ? (
                           <img
                             src={typeIcon3}
                             alt=""
+                            ratio="1/1"
+                            contain="true"
+                            skeleton="false"
                             className="w-4"
-                            draggable={false}
-                            decoding="async"
-                            loading="eager"
                           />
                         ) : null}
                       </div>
@@ -341,13 +344,14 @@ export default function ProjectDetailsScrollPanel({
                         >
                           {t.src ? (
                             <div className="w-full flex justify-center">
-                              <img
+                              <PremiumImage
                                 src={t.src}
                                 alt={t.name || ''}
-                                draggable={false}
-                                decoding="async"
-                                loading="lazy"
-                                className={`select-none object-contain ${t.semiLarge ? 'h-[34px] sm:h-[40px]' : 'h-[30px] sm:h-[36px]'} w-auto`}
+                                ratio="1/1"
+                                contain
+                                skeleton={false}
+                                sizes="74px"
+                                className={`${t.semiLarge ? 'h-[34px] sm:h-[40px]' : 'h-[30px] sm:h-[36px]'} w-[34px] sm:w-[40px]`}
                               />
                             </div>
                           ) : (

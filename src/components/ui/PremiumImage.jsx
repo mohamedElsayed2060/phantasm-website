@@ -1,5 +1,6 @@
 'use client'
 
+import NextImage from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
 
 function toPaddingTop(ratio) {
@@ -21,10 +22,17 @@ export default function PremiumImage({
   contain = true,
   priority = false,
   skeleton = true,
+  sizes = '100vw',
+  quality = 75,
+  unoptimized = false,
+  pixelated = false,
   onLoad,
 }) {
   const [loaded, setLoaded] = useState(false)
   const safeSrc = useMemo(() => String(src || '').trim(), [src])
+  const shouldBypassOptimization = useMemo(() => {
+    return /\.gif($|\?)/i.test(safeSrc) || /\.svg($|\?)/i.test(safeSrc)
+  }, [safeSrc])
 
   useEffect(() => {
     setLoaded(false)
@@ -41,12 +49,14 @@ export default function PremiumImage({
 
   const objectCls = contain ? 'object-contain' : 'object-cover'
   const paddingTop = toPaddingTop(ratio)
+  const blurDataURL =
+    'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxMCI+PHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjEwIiBmaWxsPSIjMTAxMDEwIi8+PC9zdmc+'
 
   return (
     <div
       className={`relative w-full overflow-hidden ${className}`}
       style={{
-        // ✅ modern browsers: perfect
+        // modern browsers: perfect
         aspectRatio: ratio.replace(':', '/'),
       }}
     >
@@ -54,13 +64,16 @@ export default function PremiumImage({
 
       {skeleton && !loaded ? <div className="absolute inset-0 animate-pulse bg-black/10" /> : null}
 
-      <img
+      <NextImage
         src={safeSrc}
         alt={alt}
-        draggable={false}
-        decoding="async"
-        loading={priority ? 'eager' : 'lazy'}
-        fetchPriority={priority ? 'high' : 'auto'}
+        fill
+        sizes={sizes}
+        quality={quality}
+        priority={priority}
+        unoptimized={unoptimized || shouldBypassOptimization}
+        placeholder={skeleton ? 'blur' : 'empty'}
+        blurDataURL={skeleton ? blurDataURL : undefined}
         onLoad={(e) => {
           setLoaded(true)
           onLoad?.(e)
@@ -68,6 +81,7 @@ export default function PremiumImage({
         className={`absolute inset-0 w-full h-full ${objectCls} select-none transition-opacity duration-200 ${
           loaded ? 'opacity-100' : 'opacity-0'
         } ${imgClassName}`}
+        style={pixelated ? { imageRendering: 'pixelated' } : undefined}
       />
     </div>
   )

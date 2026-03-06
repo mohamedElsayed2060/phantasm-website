@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { imgUrl } from '@/lib/cms'
 import PixelFrameOverlay from '../ui/PixelFrameOverlay'
-import BackSvgIcon from './backSvgIcon'
 import PixelScrollTrack from '@/components/island/Island-latest/overlays/components/PixelScrollTrack'
 import useSplashRouter from './useSplashRouter'
+import PremiumImage from '@/components/ui/PremiumImage'
 function sortByOrder(items = []) {
   return [...items].sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0))
 }
@@ -141,13 +141,14 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                      flex items-center justify-center cursor-pointer"
           aria-label="Open dock"
         >
-          <img
-            className="w-full h-full"
+          <PremiumImage
             src="/open-mobile-icon.gif"
             alt="open-mobile"
-            decoding="async"
-            loading="eager"
-          />{' '}
+            ratio="1/1"
+            skeleton={false}
+            sizes="40px"
+            className="w-full h-full"
+          />
         </button>
       )}
 
@@ -175,7 +176,14 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.18 }}
                 >
-                  <img src="/close.png" alt="close" decoding="async" loading="eager" />
+                  <PremiumImage
+                    src="/close.png"
+                    alt="close"
+                    ratio="1/1"
+                    skeleton={false}
+                    sizes="32px"
+                    className="w-8 h-8"
+                  />
                 </motion.button>
               )}
 
@@ -269,25 +277,26 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                               onClick={() => setScreenKey('grid')}
                             >
                               {/* <BackSvgIcon /> */}
-                              <img
-                                className="w-7"
+                              <PremiumImage
                                 src="/back-icon.png"
                                 alt="back-icon"
-                                decoding="async"
-                                loading="eager"
-                              />{' '}
+                                ratio="1/1"
+                                skeleton={false}
+                                sizes="28px"
+                                className="w-7"
+                              />
                             </button>
 
                             <div className="flex flex-col items-center gap-1 ">
                               {activeScreen?.icon ? (
-                                <img
+                                <PremiumImage
                                   src={imgUrl(activeScreen.icon)}
                                   alt={activeScreen?.title || ''}
+                                  ratio="1/1"
+                                  skeleton={false}
+                                  pixelated
+                                  sizes="36px"
                                   className="h-9 w-9"
-                                  draggable={false}
-                                  decoding="async"
-                                  loading="eager"
-                                  style={{ imageRendering: 'pixelated' }}
                                 />
                               ) : null}
 
@@ -356,14 +365,14 @@ function DockIconButton({ item, idx, animateIcons, staggerMs, onClick }) {
     >
       <div className="h-15 w-15">
         {iconSrc ? (
-          <img
+          <PremiumImage
             src={iconSrc}
             alt={label}
+            ratio="1/1"
+            skeleton={false}
+            pixelated
+            sizes="60px"
             className="h-full w-full"
-            draggable={false}
-            decoding="async"
-            loading="eager"
-            style={{ imageRendering: 'pixelated' }}
           />
         ) : (
           <span className="text-white/70 text-[9px]">ICON</span>
@@ -571,12 +580,13 @@ function LocationsScreen({ locations = [] }) {
                       <div className={`p-2 flex gap-2 ${isHi ? 'bg-red-700/80' : 'bg-black/10'}`}>
                         <div className="text-white font-semibold">
                           {/* {loc?.title || ''} */}
-                          <img
-                            className="w-10 mt-1"
+                          <PremiumImage
                             src="/location-single-icon.png"
                             alt="location"
-                            decoding="async"
-                            loading="eager"
+                            ratio="1/1"
+                            skeleton={false}
+                            sizes="40px"
+                            className="w-10 mt-1"
                           />
                         </div>
                         <div className="mt-1 text-white/85 text-[12px] sm:text-[14px] leading-relaxed whitespace-pre-line">
