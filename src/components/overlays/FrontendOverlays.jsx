@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
+
 import AvatarGate from './AvatarGate'
 import HomeDockOverlay from './HomeDockOverlay'
 import useLockIslandGestures from './useLockIslandGestures'
-import { usePathname } from 'next/navigation'
 import useLockPageZoom from './useLockPageZoom'
+
 /**
  * FrontendOverlays (STATIC)
  * - No Splash here anymore.
@@ -15,11 +17,12 @@ import useLockPageZoom from './useLockPageZoom'
 export default function FrontendOverlays({ globals }) {
   const playerSelection = globals?.playerSelection
   const homeDock = globals?.homeDock
+
   const pathname = usePathname()
   const isHome = pathname === '/'
 
   const [locks, setLocks] = useState({})
-  const [splashClosed, setSplashClosed] = useState(false)
+
   useEffect(() => {
     const onLock = (e) => {
       const key = e?.detail?.key
@@ -31,28 +34,18 @@ export default function FrontendOverlays({ globals }) {
     window.addEventListener('phantasm:overlayLock', onLock)
     return () => window.removeEventListener('phantasm:overlayLock', onLock)
   }, [])
-  useEffect(() => {
-    const sync = () => {
-      let closed = false
-      try {
-        closed = sessionStorage.getItem('phantasm:splashClosed') === '1'
-      } catch {}
-      setSplashClosed(closed)
-    }
 
-    sync()
-
-    const onClosed = () => setSplashClosed(true)
-    window.addEventListener('phantasm:splashClosed', onClosed)
-    return () => window.removeEventListener('phantasm:splashClosed', onClosed)
-  }, [])
   const anyOverlayLocked = Object.values(locks).some(Boolean)
   const isProjectsOpen = Boolean(locks?.projects)
 
+  // ✅ اقفل gestures على الجزيرة لما أي overlay يبقى مفتوح (في الهوم بس)
   useLockIslandGestures(anyOverlayLocked && isHome)
+
+  // ✅ اقفل zoom للصفحة (زي ما انت عامل)
   useLockPageZoom(true)
 
-  const allowAvatarGate = splashClosed
+  // ✅ AvatarGate لازم يبقى مسموح يفتح دايمًا (لو مفيش لاعب مختار)
+  const allowAvatarGate = true
 
   return (
     <>
