@@ -84,7 +84,7 @@ export default function AmbientLayer({ map, items = [] }) {
             alt={a.name || a.type || ''}
             draggable={false}
             decoding="async"
-            loading="eager"
+            loading="lazy"
             onAnimationIteration={isBirds && k === 0 ? () => bumpCycle(idx) : undefined}
             style={{
               position: 'absolute',

@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { percentToPxX, percentToPxY } from '../utils'
 
-function BuildingSprite({ spot, map, mode, onClick }) {
+function BaseSprite({ spot, map, src, onClick, zIndex = 12 }) {
   const pxX = percentToPxX(spot.x, map.w)
   const pxY = percentToPxY(spot.y, map.h)
 
@@ -13,19 +13,17 @@ function BuildingSprite({ spot, map, mode, onClick }) {
   const ax = Number(spot.anchorX ?? 0.5)
   const ay = Number(spot.anchorY ?? 0.9)
 
-  const src = mode === 'spawn' ? spot.buildingSpawnSrc : spot.buildingLoopSrc
-
   return (
     <button
       type="button"
-      className="absolute"
+      className="absolute cursor-pointer"
       style={{
         left: `${pxX}px`,
         top: `${pxY}px`,
         width: w,
         height: h,
         transform: `translate(${-ax * 100}%, ${-ay * 100}%)`,
-        zIndex: 12,
+        zIndex,
       }}
       onClick={onClick}
     >
@@ -34,6 +32,7 @@ function BuildingSprite({ spot, map, mode, onClick }) {
         alt={`${spot.name} building`}
         draggable={false}
         onDragStart={(e) => e.preventDefault()}
+        decoding="async"
         className="block w-full h-full object-contain"
         style={{ userSelect: 'none', WebkitUserDrag: 'none' }}
       />
@@ -48,6 +47,10 @@ export default function BuildingsLayer({
   spawningId,
   onBuiltBuildingClick,
 }) {
+  const PRE_REVEAL_MS = 10 // 1 frame تقريبًا، ممكن تخليها 2 لو مصمم بس 16 أثبت
+
+  const [preRevealId, setPreRevealId] = useState(null)
+
   const discovered = useMemo(
     () =>
       hotspots.filter((h) => {
@@ -62,24 +65,57 @@ export default function BuildingsLayer({
     [hotspots, spawningId],
   )
 
+  useEffect(() => {
+    if (!spawningSpot?.id) {
+      setPreRevealId(null)
+      return
+    }
+
+    setPreRevealId(null)
+
+    const spawnMs = Number(spawningSpot.spawnDurationMs ?? 1700)
+    const revealAt = Math.max(0, spawnMs - PRE_REVEAL_MS)
+
+    const revealTimer = window.setTimeout(() => {
+      setPreRevealId(String(spawningSpot.id))
+    }, revealAt)
+
+    return () => window.clearTimeout(revealTimer)
+  }, [spawningSpot])
+
   if (!map?.ready) return null
 
   return (
     <>
       {spawningSpot ? (
-        <BuildingSprite
-          spot={spawningSpot}
-          map={map}
-          mode="spawn"
-          onClick={() => onBuiltBuildingClick?.(spawningSpot)}
-        />
+        <>
+          {preRevealId === String(spawningSpot.id) ? (
+            <BaseSprite
+              spot={spawningSpot}
+              map={map}
+              src={spawningSpot.buildingLoopSrc}
+              zIndex={12}
+              onClick={() => onBuiltBuildingClick?.(spawningSpot)}
+            />
+          ) : null}
+
+          <BaseSprite
+            spot={spawningSpot}
+            map={map}
+            src={spawningSpot.buildingSpawnSrc}
+            zIndex={13}
+            onClick={() => onBuiltBuildingClick?.(spawningSpot)}
+          />
+        </>
       ) : null}
+
       {discovered.map((spot) => (
-        <BuildingSprite
+        <BaseSprite
           key={String(spot.id)}
           spot={spot}
           map={map}
-          mode="built"
+          src={spot.buildingLoopSrc}
+          zIndex={12}
           onClick={() => onBuiltBuildingClick?.(spot)}
         />
       ))}

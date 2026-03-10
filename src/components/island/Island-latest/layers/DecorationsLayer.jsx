@@ -37,7 +37,7 @@ export default function DecorationsLayer({ map, items = [] }) {
           alt={d.name || ''}
           draggable={false}
           decoding="async"
-          loading="eager"
+          loading="lazy"
           style={{
             position: 'absolute',
             width: `${d.w}px`,

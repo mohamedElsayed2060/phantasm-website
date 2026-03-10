@@ -434,19 +434,26 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     const decorUrls = (scene?.decorations || []).map((d) => d.src).filter(Boolean)
     const ambientUrls = (scene?.ambient || []).map((a) => a.src).filter(Boolean)
 
-    preloadMany([
-      ...FRAME_ASSETS,
-      backgroundSrc,
-      ...hotspotIcons,
-      ...discoveredLoops,
-      ...decorUrls,
-      ...ambientUrls,
-    ]).finally(() => {
+    const criticalUrls = [backgroundSrc, ...discoveredLoops].filter(Boolean)
+
+    const secondaryUrls = [...FRAME_ASSETS, ...hotspotIcons, ...decorUrls, ...ambientUrls].filter(
+      Boolean,
+    )
+
+    preloadMany(criticalUrls).finally(() => {
       setSceneReady(true)
       try {
         sessionStorage.setItem('phantasm:sceneReady', '1')
         window.dispatchEvent(new CustomEvent('phantasm:sceneReady'))
       } catch {}
+
+      const runSecondary = () => preloadMany(secondaryUrls)
+
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        window.requestIdleCallback(runSecondary, { timeout: 1500 })
+      } else {
+        window.setTimeout(runSecondary, 250)
+      }
     })
   }, [cmsReady, map.ready, view.w, view.h, reset])
   const blockCanvasInput = Boolean(overlayPos)

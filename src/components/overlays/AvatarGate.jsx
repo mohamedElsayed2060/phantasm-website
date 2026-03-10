@@ -136,15 +136,15 @@ export default function AvatarGate({ config, allowOpen = true }) {
                         animate="show"
                         exit="exit"
                         onClick={() => pick(p)}
-                        // whileHover={{
-                        //   y: -1,
-                        //   transition: { type: 'spring', stiffness: 240, damping: 24 },
-                        // }}
-                        // whileTap={{
-                        //   y: 1,
-                        //   scale: 0.98,
-                        //   transition: { type: 'spring', stiffness: 200, damping: 28 },
-                        // }}
+                        whileHover={{
+                          y: -2,
+                          transition: { type: 'spring', stiffness: 240, damping: 24 },
+                        }}
+                        whileTap={{
+                          y: 2,
+                          scale: 0.98,
+                          transition: { type: 'spring', stiffness: 200, damping: 28 },
+                        }}
                         className="origin-center rounded-md bg-[#2A1616] text-left cursor-pointer
                           focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 h-full"
                         style={{ transformOrigin: '50% 50%' }}
