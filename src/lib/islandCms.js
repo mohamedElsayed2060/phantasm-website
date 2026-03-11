@@ -135,7 +135,7 @@ export async function getIslandHotspots() {
       order: Number(p?.order ?? 0),
       projectName: p?.projectName,
       panelIntro: p?.panelIntro,
-      singleImage: absUrl(singleImageRel, base),
+      singleImage: singleImageRel,
     }
   }
 

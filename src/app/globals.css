@@ -2,10 +2,12 @@
 html,
 body {
   height: 100%;
-  background: #000; /* ✅ يمنع الwhite flash */
-  color: #fff;
+  background: #000;
+  /* color: #fff; */
 }
-
+.login {
+  background: #fff;
+}
 body {
   margin: 0;
 }
