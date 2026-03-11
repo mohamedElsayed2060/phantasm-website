@@ -473,7 +473,7 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
 
     const dw = Math.abs(view.w - prev.w)
     const dh = Math.abs(view.h - prev.h)
-    const THRESHOLD_PX = 80
+    const THRESHOLD_PX = 20
     if (dw < THRESHOLD_PX && dh < THRESHOLD_PX) {
       lastViewRef.current = { w: view.w, h: view.h }
       return
@@ -482,20 +482,17 @@ export default function IslandLab({ hotspots = [], scene, bootDock }) {
     lastViewRef.current = { w: view.w, h: view.h }
 
     if (isInteractingRef.current) return
-    if (blockCanvasInput) return
 
-    // ✅ debounce
     if (resizeTimerRef.current) window.clearTimeout(resizeTimerRef.current)
     resizeTimerRef.current = window.setTimeout(() => {
       if (isInteractingRef.current) return
-      if (blockCanvasInput) return
       reset({ duration: 0 })
     }, 120)
 
     return () => {
       if (resizeTimerRef.current) window.clearTimeout(resizeTimerRef.current)
     }
-  }, [view.w, view.h, map.ready, reset, blockCanvasInput])
+  }, [view.w, view.h, map.ready, reset])
 
   // ✅ clear timer on unmount
   useEffect(() => {

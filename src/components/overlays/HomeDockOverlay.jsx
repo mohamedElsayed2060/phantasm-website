@@ -25,6 +25,8 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
   const shouldRender = allowOpen !== false && enabled && (!onlyHome || isHomePath(pathname))
 
   const spawnMs = config?.timing?.spawnMs ?? 1200
+  const staticPreRevealMs = Math.max(0, config?.timing?.staticPreRevealMs ?? 24)
+
   const animateIcons = config?.ui?.animateIconsOnOpen !== false
   const staggerMs = config?.ui?.iconsStaggerMs ?? 60
 
@@ -37,11 +39,11 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
 
   const openGifSrc = config?.assets?.openGif ? imgUrl(config.assets.openGif) : null
   const staticPhoneSrc = config?.assets?.staticPhone ? imgUrl(config.assets.staticPhone) : null
-
   const [phase, setPhase] = useState('closed') // closed | spawning | open
   const [screenKey, setScreenKey] = useState('grid') // grid | message/locations/phones
+  const [showStaticDuringSpawn, setShowStaticDuringSpawn] = useState(false)
   const timerRef = useRef(null)
-
+  const revealTimerRef = useRef(null)
   useEffect(() => {
     const urls = [
       '/open-mobile-icon.gif',
@@ -59,9 +61,22 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
     urls.forEach((u) => {
       const img = new Image()
       img.src = u
+      img.decoding = 'async'
       img.decode?.().catch(() => {})
     })
   }, [openGifSrc, staticPhoneSrc])
+
+  useEffect(() => {
+    if (!shouldRender) return
+    const urls = itemsAll.map((it) => (it?.icon ? imgUrl(it.icon) : null)).filter(Boolean)
+
+    urls.forEach((u) => {
+      const img = new Image()
+      img.src = u
+      img.decoding = 'async'
+      img.decode?.().catch(() => {})
+    })
+  }, [shouldRender, itemsAll])
   useEffect(() => {
     if (!shouldRender) return
     const urls = itemsAll.map((it) => (it?.icon ? imgUrl(it.icon) : null)).filter(Boolean)
@@ -81,7 +96,10 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
     } catch {}
   }, [phase])
   useEffect(() => {
-    return () => timerRef.current && clearTimeout(timerRef.current)
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      if (revealTimerRef.current) clearTimeout(revealTimerRef.current)
+    }
   }, [])
 
   const launcherPos = config?.launcher?.position || 'bottom-left'
@@ -95,15 +113,31 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
 
   function open() {
     if (phase !== 'closed') return
+
+    if (timerRef.current) clearTimeout(timerRef.current)
+    if (revealTimerRef.current) clearTimeout(revealTimerRef.current)
+
     setScreenKey('grid')
+    setShowStaticDuringSpawn(false)
     setPhase('spawning')
+
+    const revealAt = Math.max(0, Number(spawnMs) - Number(staticPreRevealMs))
+
+    revealTimerRef.current = setTimeout(() => {
+      setShowStaticDuringSpawn(true)
+    }, revealAt)
+
     timerRef.current = setTimeout(() => {
+      setShowStaticDuringSpawn(false)
       setPhase('open')
     }, spawnMs)
   }
 
   function close() {
-    timerRef.current && clearTimeout(timerRef.current)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    if (revealTimerRef.current) clearTimeout(revealTimerRef.current)
+
+    setShowStaticDuringSpawn(false)
     setPhase('closed')
     setScreenKey('grid')
   }
@@ -187,152 +221,146 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
                 </motion.button>
               )}
 
-              {/* spawning gif */}
-              {phase === 'spawning' && openGifSrc ? (
-                <img
-                  src={openGifSrc}
-                  alt="Opening"
-                  draggable={false}
-                  className="block w-[270px] md:w-[320px] h-auto select-none"
-                  decoding="async"
-                  loading="eager"
-                  fetchPriority="high"
-                  style={{ imageRendering: 'pixelated' }}
-                />
-              ) : null}
+              {/* phone visual */}
+              {(phase === 'spawning' || phase === 'open') && (openGifSrc || staticPhoneSrc) ? (
+                <div className="relative w-[270px] md:w-[320px] select-none">
+                  {/* static تحت - تظهر فقط قبل نهاية spawn بشوية أو في open */}
+                  {(phase === 'open' || showStaticDuringSpawn) && staticPhoneSrc ? (
+                    <img
+                      src={staticPhoneSrc}
+                      alt="Dock"
+                      draggable={false}
+                      className="block w-full h-auto"
+                      decoding="async"
+                      loading="eager"
+                      fetchPriority="high"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
+                  ) : null}
 
-              {/* open static */}
-              {phase === 'open' && staticPhoneSrc ? (
-                <div className="relative">
-                  <img
-                    src={staticPhoneSrc}
-                    alt="Dock"
-                    draggable={false}
-                    className="block w-[270px] md:w-[320px] h-auto select-none"
-                    decoding="async"
-                    loading="eager"
-                    fetchPriority="high"
-                    style={{ imageRendering: 'pixelated' }}
-                  />
+                  {/* gif فوق أثناء spawning فقط */}
+                  {phase === 'spawning' && openGifSrc ? (
+                    <img
+                      src={openGifSrc}
+                      alt="Opening"
+                      draggable={false}
+                      className={`${
+                        showStaticDuringSpawn
+                          ? 'absolute inset-0 w-full h-full object-contain'
+                          : 'block w-full h-auto'
+                      }`}
+                      decoding="async"
+                      loading="eager"
+                      fetchPriority="high"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
+                  ) : null}
 
                   {/* content layer */}
-                  <div className="absolute inset-0 p-8 ps-10 pt-12">
-                    <AnimatePresence mode="wait">
-                      {/* GRID */}
-                      {screenKey === 'grid' ? (
-                        <motion.div
-                          key="grid"
-                          initial={{ opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 6 }}
-                          className="h-full w-full flex flex-col"
-                        >
-                          {/* TOP BOX */}
-                          <div className="mt-8">
-                            <div className="grid grid-cols-2 gap-3 px-3">
-                              {topItems.map((it, idx) => (
-                                <DockIconButton
-                                  key={`${it?.type}:${it?.order}:${idx}`}
-                                  item={it}
-                                  idx={idx}
-                                  animateIcons={animateIcons}
-                                  staggerMs={staggerMs}
-                                  onClick={() => onItemClick(it)}
-                                />
-                              ))}
+                  {phase === 'open' && staticPhoneSrc ? (
+                    <div className="absolute inset-0 p-8 ps-10 pt-12">
+                      <AnimatePresence mode="wait">
+                        {/* GRID */}
+                        {screenKey === 'grid' ? (
+                          <motion.div
+                            key="grid"
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 6 }}
+                            className="h-full w-full flex flex-col"
+                          >
+                            {/* TOP BOX */}
+                            <div className="mt-8">
+                              <div className="grid grid-cols-2 gap-3 px-3">
+                                {topItems.map((it, idx) => (
+                                  <DockIconButton
+                                    key={`${it?.type}:${it?.order}:${idx}`}
+                                    item={it}
+                                    idx={idx}
+                                    animateIcons={animateIcons}
+                                    staggerMs={staggerMs}
+                                    onClick={() => onItemClick(it)}
+                                  />
+                                ))}
+                              </div>
                             </div>
-                          </div>
 
-                          <div className="flex-1" />
+                            <div className="flex-1" />
 
-                          {/* BOTTOM BOX */}
-                          <div className="mb-8">
-                            <div className="grid grid-cols-2 gap-3 px-3">
-                              {bottomItems.map((it, idx) => (
-                                <DockIconButton
-                                  key={`${it?.type}:${it?.order}:${idx}`}
-                                  item={it}
-                                  idx={idx}
-                                  animateIcons={animateIcons}
-                                  staggerMs={staggerMs}
-                                  onClick={() => onItemClick(it)}
-                                />
-                              ))}
+                            {/* BOTTOM BOX */}
+                            <div className="mb-8">
+                              <div className="grid grid-cols-2 gap-3 px-3">
+                                {bottomItems.map((it, idx) => (
+                                  <DockIconButton
+                                    key={`${it?.type}:${it?.order}:${idx}`}
+                                    item={it}
+                                    idx={idx}
+                                    animateIcons={animateIcons}
+                                    staggerMs={staggerMs}
+                                    onClick={() => onItemClick(it)}
+                                  />
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        </motion.div>
-                      ) : (
-                        /* SCREEN */
-                        <motion.div
-                          key={`screen:${screenKey}`}
-                          initial={{ opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 6 }}
-                          className="h-full w-full py-4 px-8 md:px-11"
-                        >
-                          {/* header: Back left, icon+title right */}
-                          <div className="flex items-start justify-between mt-2">
-                            <button
-                              className="ms-1  text-white/80 text-[10px] underline"
-                              onClick={() => setScreenKey('grid')}
-                            >
-                              {/* <BackSvgIcon /> */}
-                              <PremiumImage
-                                src="/back-icon.png"
-                                alt="back-icon"
-                                ratio="1/1"
-                                skeleton={false}
-                                sizes="28px"
-                                className="w-7"
-                              />
-                            </button>
-
-                            <div className="flex flex-col items-center gap-1 ">
-                              {activeScreen?.icon ? (
+                          </motion.div>
+                        ) : (
+                          /* SCREEN */
+                          <motion.div
+                            key={`screen:${screenKey}`}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 6 }}
+                            className="h-full w-full py-4 px-8 md:px-11"
+                          >
+                            <div className="mb-2 flex items-center justify-between">
+                              <button
+                                type="button"
+                                onClick={() => setScreenKey('grid')}
+                                className="inline-flex items-center gap-2"
+                              >
                                 <PremiumImage
-                                  src={imgUrl(activeScreen.icon)}
-                                  alt={activeScreen?.title || ''}
+                                  src="/back-icon.png"
+                                  alt="back"
                                   ratio="1/1"
                                   skeleton={false}
-                                  pixelated
-                                  sizes="36px"
-                                  className="h-9 w-9"
+                                  sizes="20px"
+                                  className="w-5"
+                                />
+                                <div className="text-white/90 text-[9px] tracking-wide">
+                                  {activeScreen?.title || ''}
+                                </div>
+                              </button>
+                            </div>
+
+                            <div className="">
+                              {activeScreen?.type === 'messageForm' ? (
+                                <MessageFormScreen
+                                  submitLabel={activeScreen?.message?.submitLabel || 'SEND'}
+                                  successText={
+                                    activeScreen?.message?.successText || 'Message sent!'
+                                  }
                                 />
                               ) : null}
 
-                              <div className="text-white/90 text-[9px] tracking-wide">
-                                {activeScreen?.title || ''}
-                              </div>
+                              {activeScreen?.type === 'locationsList' ? (
+                                <LocationsScreen locations={activeScreen?.locations || []} />
+                              ) : null}
+
+                              {activeScreen?.type === 'phonesList' ? (
+                                <PhonesScreen phones={activeScreen?.phones || []} />
+                              ) : null}
+
+                              {!activeScreen?.type ? (
+                                <div className="text-white/70 text-[10px]">
+                                  Screen not found in CMS.
+                                </div>
+                              ) : null}
                             </div>
-                          </div>
-
-                          {/* body */}
-                          <div className="">
-                            {activeScreen?.type === 'messageForm' ? (
-                              <MessageFormScreen
-                                submitLabel={activeScreen?.message?.submitLabel || 'SEND'}
-                                successText={activeScreen?.message?.successText || 'Message sent!'}
-                              />
-                            ) : null}
-
-                            {activeScreen?.type === 'locationsList' ? (
-                              <LocationsScreen locations={activeScreen?.locations || []} />
-                            ) : null}
-
-                            {activeScreen?.type === 'phonesList' ? (
-                              <PhonesScreen phones={activeScreen?.phones || []} />
-                            ) : null}
-
-                            {!activeScreen?.type ? (
-                              <div className="text-white/70 text-[10px]">
-                                Screen not found in CMS.
-                              </div>
-                            ) : null}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -353,6 +381,40 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
 function DockIconButton({ item, idx, animateIcons, staggerMs, onClick }) {
   const label = item?.label || ''
   const iconSrc = item?.icon ? imgUrl(item.icon) : null
+  const [imgReady, setImgReady] = useState(false)
+
+  useEffect(() => {
+    if (!iconSrc) {
+      setImgReady(false)
+      return
+    }
+
+    let cancelled = false
+    const img = new Image()
+    img.src = iconSrc
+    img.decoding = 'async'
+
+    const done = () => {
+      if (!cancelled) setImgReady(true)
+    }
+
+    if (img.complete) {
+      done()
+    } else {
+      img.onload = done
+      img.onerror = () => {
+        if (!cancelled) setImgReady(false)
+      }
+      img
+        .decode?.()
+        .then(done)
+        .catch(() => {})
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [iconSrc])
 
   return (
     <motion.button
@@ -363,16 +425,19 @@ function DockIconButton({ item, idx, animateIcons, staggerMs, onClick }) {
       animate={animateIcons ? { opacity: 1, y: 0 } : false}
       transition={animateIcons ? { delay: (idx * staggerMs) / 1000, duration: 0.25 } : undefined}
     >
-      <div className="h-15 w-15">
+      <div className="h-15 w-15 flex items-center justify-center">
         {iconSrc ? (
-          <PremiumImage
+          <img
             src={iconSrc}
             alt={label}
-            ratio="1/1"
-            skeleton={false}
-            pixelated
-            sizes="60px"
-            className="h-full w-full"
+            draggable={false}
+            decoding="async"
+            loading="eager"
+            className={`h-full w-full object-contain select-none transition-opacity duration-150 ${
+              imgReady ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{ imageRendering: 'pixelated' }}
+            onLoad={() => setImgReady(true)}
           />
         ) : (
           <span className="text-white/70 text-[9px]">ICON</span>
