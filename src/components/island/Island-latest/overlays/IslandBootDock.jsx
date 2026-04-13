@@ -305,12 +305,18 @@ export default function IslandBootDock({
                       </svg>
                     </button>
                   </div>
-                  <div
-                    onClick={() => onClose()}
+                  <button
+                    type="button"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onClose?.()
+                    }}
                     className="z-5 cursor-pointer absolute -top-6 -right-6 flex items-center gap-1"
+                    aria-label="Close dock"
                   >
-                    <img src={'/close.png'} alt="close" />
-                  </div>
+                    <img src="/close.png" alt="close" />
+                  </button>
                 </div>
               </PixelFrameOverlay>
             </div>

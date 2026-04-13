@@ -36,7 +36,10 @@ export default function FrontendOverlays({ globals }) {
   }, [])
 
   const anyOverlayLocked = Object.values(locks).some(Boolean)
-  const isProjectsOpen = Boolean(locks?.projects)
+  const isDockBlocked = Object.entries(locks).some(([key, locked]) => {
+    if (key === 'homeDock') return false
+    return Boolean(locked)
+  })
 
   // ✅ اقفل gestures على الجزيرة لما أي overlay يبقى مفتوح (في الهوم بس)
   useLockIslandGestures(anyOverlayLocked && isHome)
@@ -50,7 +53,7 @@ export default function FrontendOverlays({ globals }) {
   return (
     <>
       <AvatarGate config={playerSelection} allowOpen={allowAvatarGate} />
-      <HomeDockOverlay config={homeDock} allowOpen={!isProjectsOpen} />
+      <HomeDockOverlay config={homeDock} allowOpen={!isDockBlocked} />{' '}
     </>
   )
 }

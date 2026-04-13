@@ -7,6 +7,10 @@ import SplashOverlay from './SplashOverlay'
 const ENV_MIN = Number(process.env.NEXT_PUBLIC_SPLASH_MIN_MS)
 const ENV_HOLD = Number(process.env.NEXT_PUBLIC_SPLASH_HOLD_AFTER_READY_MS)
 
+function isIslandReadyRoute(pathname) {
+  return pathname === '/' || pathname === '/island-custom-test'
+}
+
 export default function SplashManagerClient({
   defaultMinMs = 1850,
   holdAfterReadyMs = 300,
@@ -18,7 +22,7 @@ export default function SplashManagerClient({
   const holdMs = Number.isFinite(ENV_HOLD) && ENV_HOLD >= 0 ? ENV_HOLD : holdAfterReadyMs
 
   const [open, setOpen] = useState(true)
-  const [isInstant, setIsInstant] = useState(true) // للتحكم في نوع الدخول (مقفول جاهز أم حركة قفل)
+  const [isInstant, setIsInstant] = useState(true)
 
   const openedAtRef = useRef(Date.now())
   const readyRef = useRef(false)
@@ -32,19 +36,25 @@ export default function SplashManagerClient({
   const clearClose = () => {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
     closeTimerRef.current = null
+
+    if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
+    forceCloseTimerRef.current = null
+
     try {
       cleanupReadyRef.current?.()
     } catch {}
+
     cleanupReadyRef.current = () => {}
   }
 
   const scheduleClose = () => {
     if (!readyRef.current) return
+
     const elapsed = Date.now() - (openedAtRef.current || Date.now())
     const remaining = Math.max(0, minMs - elapsed)
     const wait = remaining + Math.max(0, holdMs)
 
-    clearClose()
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
     closeTimerRef.current = setTimeout(() => {
       setOpen(false)
     }, wait)
@@ -53,10 +63,11 @@ export default function SplashManagerClient({
   const openBoot = () => {
     clearClose()
     modeRef.current = 'boot'
-    setIsInstant(true) // في الريفريش، تظهر مقفولة فوراً
+    setIsInstant(true)
     openedAtRef.current = Date.now()
     readyRef.current = false
     setOpen(true)
+
     try {
       sessionStorage.removeItem('phantasm:sceneReady')
     } catch {}
@@ -65,18 +76,17 @@ export default function SplashManagerClient({
   const openNav = (isBackAction = false) => {
     clearClose()
     modeRef.current = 'nav'
-    // لو back تظهر مقفولة فوراً، لو كليك عادي تقفل بـ أنيميشن
     setIsInstant(isBackAction)
     openedAtRef.current = Date.now()
     readyRef.current = false
     setOpen(true)
+
     try {
       sessionStorage.removeItem('phantasm:sceneReady')
     } catch {}
   }
 
   const waitForIslandReady = () => {
-    // ✅ مهم: امسح أي ready قديم عشان مايقفلش بدري
     try {
       sessionStorage.removeItem('phantasm:sceneReady')
     } catch {}
@@ -85,6 +95,7 @@ export default function SplashManagerClient({
       window.removeEventListener('phantasm:sceneReady', onReady)
       readyRef.current = true
       scheduleClose()
+
       if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
       forceCloseTimerRef.current = null
     }
@@ -93,7 +104,6 @@ export default function SplashManagerClient({
     cleanupReadyRef.current = () => window.removeEventListener('phantasm:sceneReady', onReady)
   }
 
-  // 1) SSR -> Client handoff
   useEffect(() => {
     if (handedOffRef.current) return
     handedOffRef.current = true
@@ -114,69 +124,72 @@ export default function SplashManagerClient({
 
     openBoot()
 
-    if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
-    forceCloseTimerRef.current = setTimeout(() => {
-      readyRef.current = true
-      scheduleClose()
-    }, maxWaitMs)
-
-    if (window.location.pathname === '/') {
+    if (isIslandReadyRoute(window.location.pathname)) {
       waitForIslandReady()
     } else {
-      readyRef.current = true
-      scheduleClose()
+      if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
+      forceCloseTimerRef.current = setTimeout(() => {
+        readyRef.current = true
+        scheduleClose()
+      }, maxWaitMs)
     }
 
     return () => {
       if (forceCloseTimerRef.current) clearTimeout(forceCloseTimerRef.current)
     }
-  }, [])
+  }, [maxWaitMs])
 
-  // 2) استماع لأحداث الراوتر المخصص (Click Start)
   useEffect(() => {
     const onStart = () => {
       clickNavArmedRef.current = true
-      openNav(false) // انيميشن القفل (لأن المستخدم هو اللي داس)
+      openNav(false)
     }
+
     window.addEventListener('phantasm:splashStart', onStart)
     return () => window.removeEventListener('phantasm:splashStart', onStart)
   }, [])
 
-  // 3) مراقبة تغيير الـ Pathname
   const lastPathRef = useRef(pathname)
+
   useLayoutEffect(() => {
     const prev = lastPathRef.current
     if (pathname === prev) return
     lastPathRef.current = pathname
 
-    // Back/Forward (browser) — لازم يتعمل قبل الـ paint
     if (!open && !clickNavArmedRef.current) {
-      openNav(true) // instant closed
-      readyRef.current = true
-      scheduleClose()
+      openNav(true)
+
+      if (isIslandReadyRoute(pathname)) {
+        waitForIslandReady()
+      } else {
+        readyRef.current = true
+        scheduleClose()
+      }
+
       return
     }
 
-    // Click navigation landed
     if (modeRef.current === 'nav') {
       clickNavArmedRef.current = false
-      if (pathname === '/') waitForIslandReady()
-      else {
+
+      if (isIslandReadyRoute(pathname)) {
+        waitForIslandReady()
+      } else {
         readyRef.current = true
         scheduleClose()
       }
+
       return
     }
 
-    // Boot mode route change
     if (modeRef.current === 'boot') {
-      if (pathname === '/') waitForIslandReady()
-      else {
+      if (isIslandReadyRoute(pathname)) {
+        waitForIslandReady()
+      } else {
         readyRef.current = true
         scheduleClose()
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, open])
 
   return <SplashOverlay open={open} isInstant={isInstant} />

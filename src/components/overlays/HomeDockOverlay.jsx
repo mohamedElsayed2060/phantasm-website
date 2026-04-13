@@ -171,7 +171,7 @@ export default function HomeDockOverlay({ config, allowOpen = true }) {
           type="button"
           onClick={open}
           style={launcherStyle}
-          className="h-10 w-10
+          className="h-14 w-14
                      flex items-center justify-center cursor-pointer"
           aria-label="Open dock"
         >
