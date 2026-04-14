@@ -32,10 +32,16 @@ import ProjectsOverlay from '../Island-latest/overlays/ProjectsOverlay'
 import { choosePlacementNoBottom, clampToViewportX } from '../Island-latest/utils'
 import HomeDockOverlay from '@/components/overlays/HomeDockOverlay'
 import { preloadMany } from '../Island-latest/preloadImage'
-const WHEEL_ZOOM_STEP = 0.00032 // the smaller this is, the more zoom per wheel tick. Adjust to your preference.
-const ZOOM_LERP = 0.08 // zoom animation speed, smaller is slower
-const ZOOM_SETTLE_EPSILON = 0.0005 // how close the zoom needs to be to the target to be considered "settled"
+
+const WHEEL_ZOOM_STEP = 0.00032
+const ZOOM_LERP = 0.08
+const ZOOM_SETTLE_EPSILON = 0.0005
 const FOCUS_LERP = 0.08
+
+const PAN_VELOCITY_SMOOTHING = 0.22
+const DRAG_SUPPRESS_MS = 260
+const INTERACTIVE_DRAG_THRESHOLD = Math.max(DRAG_CLICK_THRESHOLD, 10)
+const PINCH_MIN_DISTANCE = 8
 
 const LS_PLAYER = 'phantasm:player'
 const BOOT_DOCK_DISMISSED = 'phantasm:islandBootDockDismissed'
@@ -44,6 +50,7 @@ const POPOVER_W = 360
 const POPOVER_H = 190
 const POPOVER_MARGIN = 14
 const POPOVER_GAP = 14
+
 const FRAME_ASSETS = [
   '/frames/title-fram.png',
   '/frames/CardFrame.png',
@@ -52,6 +59,7 @@ const FRAME_ASSETS = [
   '/frames/dock-frame.png',
   '/frames/botton-frame.png',
 ]
+
 function isInteractiveTarget(target) {
   if (!(target instanceof Element)) return false
 
@@ -103,6 +111,19 @@ function worldToScreen({ worldX, worldY, state }) {
   }
 }
 
+function getPointerDistance(a, b) {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  return Math.hypot(dx, dy)
+}
+
+function getPointerCenter(a, b) {
+  return {
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+  }
+}
+
 export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDock }) {
   const viewportRef = useRef(null)
   const sceneRef = useRef(null)
@@ -110,14 +131,27 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
   const inertiaRafRef = useRef(null)
   const zoomRafRef = useRef(null)
   const focusRafRef = useRef(null)
+  const cameraFrameRafRef = useRef(null)
 
   const pointerIdRef = useRef(null)
   const didInitRef = useRef(false)
   const spawnTimerRef = useRef(null)
   const bootReadySentRef = useRef(false)
   const sceneReadySentRef = useRef(false)
+  const suppressInteractiveClickUntilRef = useRef(0)
+  const lastDragWasInteractiveRef = useRef(false)
+  const activePointersRef = useRef(new Map())
+  const pinchRef = useRef({
+    active: false,
+    startDistance: 0,
+    startScale: 1,
+    startCamera: { x: 0, y: 0 },
+    startCenter: { x: 0, y: 0 },
+  })
   const dragRef = useRef({
     active: false,
+    captured: false,
+    startedOnInteractive: false,
     startX: 0,
     startY: 0,
     lastX: 0,
@@ -132,6 +166,8 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
   const targetScaleRef = useRef(1)
   const zoomAnchorRef = useRef(null)
   const focusTargetRef = useRef(null)
+  const hoveredHotspotIdRef = useRef(null)
+  const overlayVisibleRef = useRef(false)
 
   const [viewport, setViewport] = useState({ w: 0, h: 0 })
   const [mapSize, setMapSize] = useState({
@@ -151,6 +187,7 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
   const [dialogOpen, setDialogOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [overlayPos, setOverlayPos] = useState(null)
+  const [cameraFrame, setCameraFrame] = useState(0)
   const [player, setPlayer] = useState(() => {
     const stored = readPlayerFromStorage()
     return (
@@ -162,13 +199,6 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
     )
   })
 
-  const [debugState, setDebugState] = useState({
-    cameraX: 0,
-    cameraY: 0,
-    scale: 1,
-    targetScale: 1,
-  })
-
   const maxZoomMult = Number(scene?.maxZoomMult || DEFAULT_MAX_ZOOM_MULT)
   const backgroundSrc = scene?.backgroundSrc || ''
 
@@ -178,20 +208,10 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
     )
   }, [hotspots])
 
-  const hotspotDebugRows = useMemo(() => {
-    return orderedHotspots.slice(0, 8).map((hotspot) => {
-      const point = getHotspotWorldPoint(hotspot, mapSize)
-      return {
-        id: hotspot?.id || 'unknown',
-        label: getHotspotLabel(hotspot),
-        rawX: point?.__debug?.rawX ?? '—',
-        rawY: point?.__debug?.rawY ?? '—',
-        x: Math.round(point.x),
-        y: Math.round(point.y),
-        discovered: discoveredIds.has(String(hotspot?.id)) ? 'yes' : 'no',
-      }
-    })
-  }, [orderedHotspots, mapSize, discoveredIds])
+  const hoveredHotspot = useMemo(() => {
+    if (!hoveredHotspotId) return null
+    return orderedHotspots.find((spot) => String(spot?.id) === String(hoveredHotspotId)) || null
+  }, [orderedHotspots, hoveredHotspotId])
 
   const baseScale = useMemo(() => getCoverScale(viewport, mapSize), [viewport, mapSize])
   const minScale = useMemo(() => baseScale, [baseScale])
@@ -202,7 +222,7 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
 
   const pannable = useMemo(() => {
     return canPan(viewport, getScaledMapSize(currentScaleRef.current || baseScale, mapSize))
-  }, [viewport, baseScale, mapSize, debugState.scale])
+  }, [viewport, baseScale, mapSize, cameraFrame])
 
   const blockCanvasInput = Boolean(overlayPos || bootDockOpen)
 
@@ -215,6 +235,36 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
     const popW = Math.max(0, Math.min(POPOVER_W, viewport.w - 24))
     return { spot, popW, popH: POPOVER_H }
   }, [openProjectsFor, orderedHotspots, mapSize.ready, viewport.w])
+
+  useEffect(() => {
+    hoveredHotspotIdRef.current = hoveredHotspotId
+  }, [hoveredHotspotId])
+
+  useEffect(() => {
+    overlayVisibleRef.current = Boolean(overlayMeta || hoveredHotspotId)
+  }, [overlayMeta, hoveredHotspotId])
+
+  const scheduleCameraFrame = useCallback(() => {
+    if (!overlayVisibleRef.current) return
+    if (cameraFrameRafRef.current) return
+
+    cameraFrameRafRef.current = window.requestAnimationFrame(() => {
+      cameraFrameRafRef.current = null
+      setCameraFrame((prev) => prev + 1)
+    })
+  }, [])
+
+  const updateSceneTransform = useCallback(() => {
+    const node = sceneRef.current
+    if (!node) return
+
+    node.style.width = `${mapSize.w}px`
+    node.style.height = `${mapSize.h}px`
+    node.style.transform = `translate3d(${cameraRef.current.x}px, ${cameraRef.current.y}px, 0) scale(${currentScaleRef.current})`
+    node.style.transformOrigin = '0 0'
+
+    scheduleCameraFrame()
+  }, [mapSize.h, mapSize.w, scheduleCameraFrame])
 
   useEffect(() => {
     if (!overlayMeta || !viewport.w || !viewport.h || !mapSize.ready) {
@@ -290,21 +340,41 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
     }
 
     setOverlayPos({ ...overlayMeta, placement, left, top, buildingScreen })
-  }, [
-    overlayMeta,
-    viewport.w,
-    viewport.h,
-    mapSize.ready,
-    mapSize.w,
-    mapSize.h,
-    debugState.cameraX,
-    debugState.cameraY,
-    debugState.scale,
-  ])
+  }, [overlayMeta, viewport.w, viewport.h, mapSize.ready, mapSize.w, mapSize.h, cameraFrame])
 
   useEffect(() => {
     saveDiscoveredIds(discoveredIds)
   }, [discoveredIds])
+
+  const stopInertia = useCallback(() => {
+    if (inertiaRafRef.current) {
+      window.cancelAnimationFrame(inertiaRafRef.current)
+      inertiaRafRef.current = null
+    }
+    velocityRef.current = { x: 0, y: 0 }
+  }, [])
+
+  const stopZoomAnimation = useCallback(() => {
+    if (zoomRafRef.current) {
+      window.cancelAnimationFrame(zoomRafRef.current)
+      zoomRafRef.current = null
+    }
+    zoomAnchorRef.current = null
+  }, [])
+
+  const stopFocusAnimation = useCallback(() => {
+    if (focusRafRef.current) {
+      window.cancelAnimationFrame(focusRafRef.current)
+      focusRafRef.current = null
+    }
+    focusTargetRef.current = null
+  }, [])
+
+  const stopAllMotion = useCallback(() => {
+    stopInertia()
+    stopZoomAnimation()
+    stopFocusAnimation()
+  }, [stopFocusAnimation, stopInertia, stopZoomAnimation])
 
   const resetDiscoveryState = useCallback(() => {
     if (spawnTimerRef.current) {
@@ -401,7 +471,6 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
 
     const pagesLen = Array.isArray(bootDock?.pages) ? bootDock.pages.length : 0
     if (!pagesLen) return
-
     if (isBootDockDismissed()) return
 
     setBootDockOpen(true)
@@ -413,6 +482,7 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
     bootDock?.enabled,
     bootDock?.pages?.length,
   ])
+
   useEffect(() => {
     try {
       window.dispatchEvent(
@@ -432,6 +502,7 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
       } catch {}
     }
   }, [bootDockOpen])
+
   const closeBootDock = useCallback(() => {
     setBootDockOpen(false)
 
@@ -440,54 +511,26 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
     } catch {}
   }, [])
 
-  const updateSceneTransform = useCallback(() => {
-    const node = sceneRef.current
-    if (!node) return
+  const applyImmediateZoom = useCallback(
+    (nextScale, anchor, baseCamera = cameraRef.current, baseScale = currentScaleRef.current) => {
+      const safeScale = clamp(nextScale, minScale, maxScale)
+      const nextCamera = getCameraForZoomAtPoint({
+        viewport,
+        currentCamera: baseCamera,
+        currentScale: baseScale,
+        nextScale: safeScale,
+        anchor,
+        mapSize,
+      })
 
-    node.style.width = `${mapSize.w}px`
-    node.style.height = `${mapSize.h}px`
-    node.style.transform = `translate3d(${cameraRef.current.x}px, ${cameraRef.current.y}px, 0) scale(${currentScaleRef.current})`
-    node.style.transformOrigin = '0 0'
-  }, [mapSize.h, mapSize.w])
+      currentScaleRef.current = safeScale
+      targetScaleRef.current = safeScale
+      cameraRef.current = nextCamera
 
-  const syncDebugState = useCallback(() => {
-    setDebugState({
-      cameraX: cameraRef.current.x,
-      cameraY: cameraRef.current.y,
-      scale: currentScaleRef.current,
-      targetScale: targetScaleRef.current,
-    })
-  }, [])
-
-  const stopInertia = useCallback(() => {
-    if (inertiaRafRef.current) {
-      window.cancelAnimationFrame(inertiaRafRef.current)
-      inertiaRafRef.current = null
-    }
-    velocityRef.current = { x: 0, y: 0 }
-  }, [])
-
-  const stopZoomAnimation = useCallback(() => {
-    if (zoomRafRef.current) {
-      window.cancelAnimationFrame(zoomRafRef.current)
-      zoomRafRef.current = null
-    }
-    zoomAnchorRef.current = null
-  }, [])
-
-  const stopFocusAnimation = useCallback(() => {
-    if (focusRafRef.current) {
-      window.cancelAnimationFrame(focusRafRef.current)
-      focusRafRef.current = null
-    }
-    focusTargetRef.current = null
-  }, [])
-
-  const stopAllMotion = useCallback(() => {
-    stopInertia()
-    stopZoomAnimation()
-    stopFocusAnimation()
-  }, [stopFocusAnimation, stopInertia, stopZoomAnimation])
+      updateSceneTransform()
+    },
+    [mapSize, maxScale, minScale, updateSceneTransform, viewport],
+  )
 
   const animateZoomTo = useCallback(
     (nextScale, anchor) => {
@@ -518,7 +561,6 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
         cameraRef.current = nextCamera
 
         updateSceneTransform()
-        syncDebugState()
 
         if (Math.abs(targetScale - next) <= ZOOM_SETTLE_EPSILON) {
           currentScaleRef.current = targetScale
@@ -531,7 +573,6 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
             mapSize,
           })
           updateSceneTransform()
-          syncDebugState()
           zoomRafRef.current = null
           zoomAnchorRef.current = null
           return
@@ -542,7 +583,7 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
 
       zoomRafRef.current = window.requestAnimationFrame(tick)
     },
-    [mapSize, maxScale, minScale, syncDebugState, updateSceneTransform, viewport],
+    [mapSize, maxScale, minScale, updateSceneTransform, viewport],
   )
 
   const animateFocusTo = useCallback(
@@ -594,7 +635,6 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
         currentScaleRef.current = settled ? target.scale : nextScaleValue
 
         updateSceneTransform()
-        syncDebugState()
 
         if (settled) {
           const done = target.onComplete
@@ -615,11 +655,11 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
       minScale,
       stopFocusAnimation,
       stopZoomAnimation,
-      syncDebugState,
       updateSceneTransform,
       viewport,
     ],
   )
+
   const animateResetToHome = useCallback(() => {
     stopZoomAnimation()
     stopFocusAnimation()
@@ -649,13 +689,12 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
         Math.abs(target.scale - nextScaleValue) <= ZOOM_SETTLE_EPSILON
 
       cameraRef.current = settled
-        ? { x: target.cameraX, y: target.cameraY }
+        ? { x: target.cameraX, y: targetCamera.y }
         : { x: nextCameraX, y: nextCameraY }
 
       currentScaleRef.current = settled ? target.scale : nextScaleValue
 
       updateSceneTransform()
-      syncDebugState()
 
       if (settled) {
         focusTargetRef.current = null
@@ -667,22 +706,21 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
     }
 
     focusRafRef.current = window.requestAnimationFrame(tick)
-  }, [
-    baseScale,
-    mapSize,
-    stopFocusAnimation,
-    stopZoomAnimation,
-    syncDebugState,
-    updateSceneTransform,
-    viewport,
-  ])
+  }, [baseScale, mapSize, stopFocusAnimation, stopZoomAnimation, updateSceneTransform, viewport])
+
   const startInertia = useCallback(() => {
     stopInertia()
 
-    const tick = () => {
+    let lastTs = performance.now()
+
+    const tick = (ts) => {
+      const dt = Math.max(8, Math.min(32, ts - lastTs))
+      lastTs = ts
+
+      const damping = Math.pow(INERTIA_FRICTION, dt / 16.6667)
       const nextVelocity = {
-        x: velocityRef.current.x * INERTIA_FRICTION,
-        y: velocityRef.current.y * INERTIA_FRICTION,
+        x: velocityRef.current.x * damping,
+        y: velocityRef.current.y * damping,
       }
 
       if (
@@ -691,7 +729,6 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
       ) {
         velocityRef.current = { x: 0, y: 0 }
         inertiaRafRef.current = null
-        syncDebugState()
         return
       }
 
@@ -699,27 +736,52 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
 
       cameraRef.current = clampCamera(
         {
-          x: cameraRef.current.x + nextVelocity.x * 16,
-          y: cameraRef.current.y + nextVelocity.y * 16,
+          x: cameraRef.current.x + nextVelocity.x * dt,
+          y: cameraRef.current.y + nextVelocity.y * dt,
         },
         viewport,
         getScaledMapSize(currentScaleRef.current, mapSize),
       )
 
       updateSceneTransform()
-      syncDebugState()
 
       inertiaRafRef.current = window.requestAnimationFrame(tick)
     }
 
     inertiaRafRef.current = window.requestAnimationFrame(tick)
-  }, [mapSize, stopInertia, syncDebugState, updateSceneTransform, viewport])
+  }, [mapSize, stopInertia, updateSceneTransform, viewport])
 
   const normalizeWheelDelta = useCallback((e) => {
     if (e.deltaMode === 1) return e.deltaY * WHEEL_LINE_HEIGHT_PX
     if (e.deltaMode === 2) return e.deltaY * window.innerHeight
     return e.deltaY
   }, [])
+
+  const beginPinchIfPossible = useCallback(() => {
+    const points = Array.from(activePointersRef.current.values())
+    if (points.length < 2) return false
+
+    const a = points[0]
+    const b = points[1]
+    const startDistance = getPointerDistance(a, b)
+
+    if (startDistance < PINCH_MIN_DISTANCE) return false
+
+    pinchRef.current = {
+      active: true,
+      startDistance,
+      startScale: currentScaleRef.current,
+      startCamera: { ...cameraRef.current },
+      startCenter: getPointerCenter(a, b),
+    }
+
+    dragRef.current.active = false
+    pointerIdRef.current = null
+    setDragging(false)
+
+    stopAllMotion()
+    return true
+  }, [stopAllMotion])
 
   useEffect(() => {
     const node = viewportRef.current
@@ -772,9 +834,8 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
     }
 
     updateSceneTransform()
-    syncDebugState()
     setIsReady(true)
-  }, [baseScale, mapSize, maxScale, viewport, updateSceneTransform, syncDebugState])
+  }, [baseScale, mapSize, maxScale, viewport, updateSceneTransform])
 
   useEffect(() => {
     if (!isReady) return
@@ -860,8 +921,7 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
     )
 
     updateSceneTransform()
-    syncDebugState()
-  }, [baseScale, mapSize, maxScale, syncDebugState, updateSceneTransform, viewport])
+  }, [baseScale, mapSize, maxScale, updateSceneTransform, viewport])
 
   useEffect(() => {
     return () => {
@@ -869,8 +929,10 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
       if (inertiaRafRef.current) window.cancelAnimationFrame(inertiaRafRef.current)
       if (zoomRafRef.current) window.cancelAnimationFrame(zoomRafRef.current)
       if (focusRafRef.current) window.cancelAnimationFrame(focusRafRef.current)
+      if (cameraFrameRafRef.current) window.cancelAnimationFrame(cameraFrameRafRef.current)
     }
   }, [])
+
   useEffect(() => {
     bootReadySentRef.current = false
     sceneReadySentRef.current = false
@@ -880,6 +942,7 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
       sessionStorage.removeItem('phantasm:sceneReady')
     } catch {}
   }, [backgroundSrc])
+
   const handleWheel = useCallback(
     (e) => {
       if (!viewportRef.current) return
@@ -913,17 +976,30 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
     ],
   )
 
-  const handlePointerDown = useCallback(
+  const handlePointerDownCapture = useCallback(
     (e) => {
-      if (isInteractiveTarget(e.target)) return
+      if (!viewportRef.current) return
       if (blockCanvasInput) return
-      if (!pannable) return
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+
+      activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (activePointersRef.current.size >= 2) {
+        beginPinchIfPossible()
+        return
+      }
 
       stopAllMotion()
 
+      const startedOnInteractive = isInteractiveTarget(e.target)
+
       pointerIdRef.current = e.pointerId
+      lastDragWasInteractiveRef.current = startedOnInteractive
+
       dragRef.current = {
         active: true,
+        captured: false,
+        startedOnInteractive,
         startX: e.clientX,
         startY: e.clientY,
         lastX: e.clientX,
@@ -932,24 +1008,97 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
         moved: 0,
       }
 
-      setDragging(true)
-      e.currentTarget.setPointerCapture?.(e.pointerId)
-    },
-    [blockCanvasInput, pannable, stopAllMotion],
-  )
+      setDragging(false)
 
-  const handlePointerMove = useCallback(
+      // مهم:
+      // ما نخطفش الـ pointer من الزر لو البداية كانت على hotspot/building
+      if (!startedOnInteractive) {
+        e.currentTarget.setPointerCapture?.(e.pointerId)
+        dragRef.current.captured = true
+      }
+    },
+    [beginPinchIfPossible, blockCanvasInput, stopAllMotion],
+  )
+  const handlePointerMoveCapture = useCallback(
     (e) => {
+      const currentPoint = activePointersRef.current.get(e.pointerId)
+      if (currentPoint) {
+        currentPoint.x = e.clientX
+        currentPoint.y = e.clientY
+      }
+
+      if (pinchRef.current.active) {
+        const points = Array.from(activePointersRef.current.values())
+        if (points.length < 2) return
+
+        const a = points[0]
+        const b = points[1]
+        const distance = getPointerDistance(a, b)
+
+        if (distance < PINCH_MIN_DISTANCE) return
+
+        const center = getPointerCenter(a, b)
+        const pinch = pinchRef.current
+        const scaleRatio = distance / pinch.startDistance
+        const nextScale = clamp(pinch.startScale * scaleRatio, minScale, maxScale)
+
+        let nextCamera = getCameraForZoomAtPoint({
+          viewport,
+          currentCamera: pinch.startCamera,
+          currentScale: pinch.startScale,
+          nextScale,
+          anchor: pinch.startCenter,
+          mapSize,
+        })
+
+        nextCamera = clampCamera(
+          {
+            x: nextCamera.x + (center.x - pinch.startCenter.x),
+            y: nextCamera.y + (center.y - pinch.startCenter.y),
+          },
+          viewport,
+          getScaledMapSize(nextScale, mapSize),
+        )
+
+        currentScaleRef.current = nextScale
+        targetScaleRef.current = nextScale
+        cameraRef.current = nextCamera
+        velocityRef.current = { x: 0, y: 0 }
+
+        updateSceneTransform()
+        return
+      }
+
       if (!dragRef.current.active) return
       if (pointerIdRef.current !== e.pointerId) return
 
       const moveDx = e.clientX - dragRef.current.startX
       const moveDy = e.clientY - dragRef.current.startY
+      const moved = Math.max(Math.abs(moveDx), Math.abs(moveDy))
 
-      dragRef.current.moved = Math.max(dragRef.current.moved, Math.abs(moveDx), Math.abs(moveDy))
+      dragRef.current.moved = Math.max(dragRef.current.moved, moved)
+
+      const threshold = dragRef.current.startedOnInteractive
+        ? INTERACTIVE_DRAG_THRESHOLD
+        : DRAG_CLICK_THRESHOLD
+
+      // لو البداية كانت على عنصر interactive، ما نبدأش drag فعلي إلا بعد threshold
+      if (dragRef.current.startedOnInteractive && moved <= threshold) {
+        return
+      }
+
+      // أول ما نتأكد إنه drag حقيقي، ساعتها فقط نخطف الـ pointer
+      if (!dragRef.current.captured) {
+        e.currentTarget.setPointerCapture?.(e.pointerId)
+        dragRef.current.captured = true
+      }
 
       const frameDx = e.clientX - dragRef.current.lastX
       const frameDy = e.clientY - dragRef.current.lastY
+
+      if (dragRef.current.moved > threshold && !dragging) {
+        setDragging(true)
+      }
 
       const nextCamera = clampCamera(
         {
@@ -970,35 +1119,84 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
       const rawVy = frameDy / dt
 
       velocityRef.current = {
-        x: Math.sign(rawVx) * Math.min(Math.abs(rawVx), MAX_VELOCITY),
-        y: Math.sign(rawVy) * Math.min(Math.abs(rawVy), MAX_VELOCITY),
+        x:
+          velocityRef.current.x +
+          (Math.sign(rawVx) * Math.min(Math.abs(rawVx), MAX_VELOCITY) - velocityRef.current.x) *
+            PAN_VELOCITY_SMOOTHING,
+        y:
+          velocityRef.current.y +
+          (Math.sign(rawVy) * Math.min(Math.abs(rawVy), MAX_VELOCITY) - velocityRef.current.y) *
+            PAN_VELOCITY_SMOOTHING,
       }
 
       dragRef.current.lastX = e.clientX
       dragRef.current.lastY = e.clientY
       dragRef.current.lastTime = now
-
-      syncDebugState()
     },
-    [mapSize, syncDebugState, updateSceneTransform, viewport],
+    [dragging, mapSize, maxScale, minScale, updateSceneTransform, viewport],
   )
 
-  const finishDrag = useCallback(
+  const finishPointerGesture = useCallback(
     (e) => {
-      if (!dragRef.current.active) return
-      if (pointerIdRef.current !== e.pointerId) return
+      activePointersRef.current.delete(e.pointerId)
+
+      if (pinchRef.current.active) {
+        if (activePointersRef.current.size < 2) {
+          pinchRef.current.active = false
+          suppressInteractiveClickUntilRef.current = performance.now() + DRAG_SUPPRESS_MS
+        }
+
+        if (dragRef.current.captured) {
+          try {
+            e.currentTarget.releasePointerCapture?.(e.pointerId)
+          } catch {}
+        }
+
+        dragRef.current.captured = false
+        return
+      }
+
+      if (!dragRef.current.active) {
+        if (dragRef.current.captured) {
+          try {
+            e.currentTarget.releasePointerCapture?.(e.pointerId)
+          } catch {}
+        }
+
+        dragRef.current.captured = false
+        return
+      }
+
+      if (pointerIdRef.current !== e.pointerId) {
+        if (dragRef.current.captured) {
+          try {
+            e.currentTarget.releasePointerCapture?.(e.pointerId)
+          } catch {}
+        }
+
+        dragRef.current.captured = false
+        return
+      }
 
       const moved = dragRef.current.moved
+      const threshold = dragRef.current.startedOnInteractive
+        ? INTERACTIVE_DRAG_THRESHOLD
+        : DRAG_CLICK_THRESHOLD
 
       dragRef.current.active = false
       pointerIdRef.current = null
       setDragging(false)
 
-      try {
-        e.currentTarget.releasePointerCapture?.(e.pointerId)
-      } catch {}
+      if (dragRef.current.captured) {
+        try {
+          e.currentTarget.releasePointerCapture?.(e.pointerId)
+        } catch {}
+      }
 
-      if (moved > DRAG_CLICK_THRESHOLD) {
+      dragRef.current.captured = false
+
+      if (moved > threshold) {
+        suppressInteractiveClickUntilRef.current = performance.now() + DRAG_SUPPRESS_MS
         startInertia()
       } else {
         velocityRef.current = { x: 0, y: 0 }
@@ -1006,6 +1204,13 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
     },
     [startInertia],
   )
+
+  const handleClickCapture = useCallback((e) => {
+    if (performance.now() < suppressInteractiveClickUntilRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }, [])
 
   const finishDiscovery = useCallback((hotspot) => {
     const sid = String(hotspot?.id)
@@ -1051,6 +1256,7 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
       const alreadyDiscovered = discoveredIds.has(sid)
 
       closeBootDock()
+      setHoveredHotspotId(null)
       setActiveHotspotId(sid)
 
       const worldPoint = getHotspotWorldPoint(hotspot, mapSize)
@@ -1088,6 +1294,7 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
       const sid = String(hotspot?.id)
 
       closeBootDock()
+      setHoveredHotspotId(null)
       setActiveHotspotId(sid)
       setOpenProjectsFor(null)
       setActiveProject(null)
@@ -1136,11 +1343,12 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
       <div
         ref={viewportRef}
         className="absolute inset-0 overflow-hidden"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={finishDrag}
-        onPointerCancel={finishDrag}
-        onPointerLeave={finishDrag}
+        onPointerDownCapture={handlePointerDownCapture}
+        onPointerMoveCapture={handlePointerMoveCapture}
+        onPointerUpCapture={finishPointerGesture}
+        onPointerCancelCapture={finishPointerGesture}
+        onLostPointerCapture={finishPointerGesture}
+        onClickCapture={handleClickCapture}
         style={{
           touchAction: 'none',
           userSelect: 'none',
@@ -1168,7 +1376,7 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
           <img
             src={backgroundSrc}
             alt="Island scene"
-            className="block h-full w-full pointer-events-none select-none object-cover"
+            className="pointer-events-none block h-full w-full select-none object-cover"
             draggable={false}
           />
 
@@ -1194,6 +1402,23 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
           />
 
           <AmbientLayer items={scene?.ambient || []} mapSize={mapSize} />
+
+          {hoveredHotspot && !blockCanvasInput ? (
+            <div
+              className="pointer-events-none absolute z-[30]"
+              style={{
+                left: `${getHotspotWorldPoint(hoveredHotspot, mapSize).x}px`,
+                top: `${getHotspotWorldPoint(hoveredHotspot, mapSize).y}px`,
+                transform: 'translate(-50%, calc(-100% - 14px))',
+              }}
+              aria-hidden="true"
+            >
+              <span className="relative block whitespace-nowrap rounded-full border border-white/15 bg-black/75 px-3 py-1.5 text-[12px] font-medium leading-none text-white shadow-[0_10px_30px_rgba(0,0,0,0.22)] backdrop-blur-md">
+                {getHotspotLabel(hoveredHotspot)}
+                <span className="absolute left-1/2 top-full h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 border-r border-b border-white/15 bg-black/75" />
+              </span>
+            </div>
+          ) : null}
         </div>
 
         <IslandBootDock
@@ -1237,60 +1462,6 @@ export default function IslandCustomLab({ hotspots = [], scene, bootDock, homeDo
             onCloseDialog={() => setDialogOpen(false)}
           />
         ) : null}
-        {/* 
-        <div className="pointer-events-none absolute left-4 top-4 z-20 rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-xs text-white/75 backdrop-blur">
-          <div>Island Custom Test</div>
-          <div>
-            viewport: {viewport.w} × {viewport.h}
-          </div>
-          <div>
-            map: {mapSize.w} × {mapSize.h}
-          </div>
-          <div>scale: {debugState.scale.toFixed(4)}</div>
-          <div>targetScale: {debugState.targetScale.toFixed(4)}</div>
-          <div>minScale: {minScale.toFixed(4)}</div>
-          <div>maxScale: {maxScale.toFixed(4)}</div>
-          <div>cameraX: {debugState.cameraX.toFixed(2)}</div>
-          <div>cameraY: {debugState.cameraY.toFixed(2)}</div>
-          <div>pannable: {pannable ? 'yes' : 'no'}</div>
-          <div>hotspots: {orderedHotspots.length}</div>
-          <div>activeHotspot: {activeHotspotId || 'none'}</div>
-          <div>hoveredHotspot: {hoveredHotspotId || 'none'}</div>
-          <div>spawningId: {spawningId || 'none'}</div>
-          <div>discovered: {discoveredIds.size}</div>
-          <div>bootDock: {bootDock ? 'yes' : 'no'}</div>
-          <div>bootDockOpen: {bootDockOpen ? 'yes' : 'no'}</div>
-          <div>projectsFor: {openProjectsFor || 'none'}</div>
-          <div>dialogOpen: {dialogOpen ? 'yes' : 'no'}</div>
-          <div>detailsOpen: {detailsOpen ? 'yes' : 'no'}</div>
-          <div>player: {player?.name || 'none'}</div>
-          <div>dockDismissed: {isBootDockDismissed() ? 'yes' : 'no'}</div>
-          <div>scene ready: {isReady ? 'yes' : 'no'}</div>
-        </div> */}
-
-        {/* <div className="absolute bottom-4 left-4 z-20 max-w-[460px] rounded-xl border border-white/10 bg-black/60 p-3 text-[11px] text-white/80 backdrop-blur">
-          <div className="mb-2 font-semibold uppercase tracking-[0.18em] text-white/90">
-            Hotspot debug
-          </div>
-
-          <div className="space-y-1">
-            {hotspotDebugRows.map((row) => (
-              <div
-                key={row.id}
-                className="grid grid-cols-[1fr_auto_auto_auto] gap-2 rounded-md border border-white/5 px-2 py-1"
-              >
-                <div className="truncate">{row.label}</div>
-                <div>
-                  {row.rawX}, {row.rawY}
-                </div>
-                <div>
-                  {row.x}, {row.y}
-                </div>
-                <div>{row.discovered}</div>
-              </div>
-            ))}
-          </div>
-        </div> */}
       </div>
     </main>
   )

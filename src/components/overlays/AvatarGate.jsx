@@ -4,8 +4,97 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import PixelFrameOverlay from '@/components/ui/PixelFrameOverlay'
 import PremiumImage from '@/components/ui/PremiumImage'
-const LS_PLAYER = 'phantasm:player'
 
+const LS_PLAYER = 'phantasm:player'
+const CONTENT_REVEAL_DELAY_MS = 820
+
+// ─── CSS keyframes injected once ────────────────────────────────────────────
+const PIXEL_STYLES = `
+  @keyframes pixel-rows-wipe {
+    0%   { clip-path: inset(0 0 100% 0); }
+    12%  { clip-path: inset(0 0 87%  0); }
+    25%  { clip-path: inset(0 0 72%  0); }
+    37%  { clip-path: inset(0 0 55%  0); }
+    50%  { clip-path: inset(0 0 40%  0); }
+    62%  { clip-path: inset(0 0 27%  0); }
+    75%  { clip-path: inset(0 0 14%  0); }
+    87%  { clip-path: inset(0 0 4%   0); }
+    100% { clip-path: inset(0 0 0%   0); }
+  }
+
+  @keyframes px-bounce {
+    0%   { transform: translateY(0px);  }
+    50%  { transform: translateY(-3px); }
+    100% { transform: translateY(0px);  }
+  }
+
+  @keyframes px-bounce-exit {
+    0%   { transform: translateY(-3px); }
+    100% { transform: translateY(0px);  }
+  }
+
+  .avatar-card {
+    animation-fill-mode: both;
+    animation-timing-function: steps(8, end);
+  }
+
+  .avatar-card:hover .avatar-card__inner {
+    animation: px-bounce 0.55s steps(4, end) infinite;
+  }
+
+  .avatar-card:not(:hover) .avatar-card__inner {
+    animation: px-bounce-exit 0.18s steps(3, end) forwards;
+  }
+
+  .avatar-card:hover {
+    outline: 2px solid rgba(224, 80, 80, 0.5);
+    outline-offset: 3px;
+  }
+`
+
+function injectStyles() {
+  if (typeof document === 'undefined') return
+  if (document.getElementById('avatargate-px-styles')) return
+  const tag = document.createElement('style')
+  tag.id = 'avatargate-px-styles'
+  tag.textContent = PIXEL_STYLES
+  document.head.appendChild(tag)
+}
+
+// ─── Animation variants ──────────────────────────────────────────────────────
+
+// Overlay backdrop — plain fade, short
+const overlayV = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.22 } },
+  exit: { opacity: 0, transition: { duration: 0.18 } },
+}
+
+// Title — calm slide + fade, no blur
+const titleV = {
+  hidden: { opacity: 0, y: 10 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+  },
+  exit: {
+    opacity: 0,
+    y: 6,
+    transition: { duration: 0.18 },
+  },
+}
+
+// Cards wrapper — fade in, triggers children
+const cardsWrapV = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { delay: 0.3, duration: 0.2 },
+  },
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 export default function AvatarGate({ config, allowOpen = true }) {
   const enabled = config?.enabled !== false
   const players = Array.isArray(config?.players) ? config.players : []
@@ -13,7 +102,36 @@ export default function AvatarGate({ config, allowOpen = true }) {
 
   const [ready, setReady] = useState(false)
   const [selected, setSelected] = useState(null)
+  const [contentReady, setContentReady] = useState(false)
+  const [typedTitle, setTypedTitle] = useState('')
 
+  // Inject styles once
+  useEffect(() => {
+    injectStyles()
+  }, [])
+
+  // Typewriter for title — starts when content becomes ready
+  useEffect(() => {
+    if (!contentReady) {
+      setTypedTitle('')
+      return
+    }
+    const full = String(title).toUpperCase()
+    setTypedTitle('')
+    let i = 0
+    const startDelay = window.setTimeout(() => {
+      const interval = window.setInterval(() => {
+        i += 1
+        setTypedTitle(full.slice(0, i))
+        if (i >= full.length) window.clearInterval(interval)
+      }, 65)
+    }, 350)
+    return () => {
+      window.clearTimeout(startDelay)
+    }
+  }, [contentReady, title])
+
+  // Restore saved player
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LS_PLAYER)
@@ -23,6 +141,8 @@ export default function AvatarGate({ config, allowOpen = true }) {
   }, [])
 
   const isOpen = allowOpen && enabled && ready && !selected && players.length > 0
+
+  // Overlay lock event
   useEffect(() => {
     try {
       window.dispatchEvent(
@@ -33,15 +153,60 @@ export default function AvatarGate({ config, allowOpen = true }) {
     } catch {}
   }, [isOpen])
 
+  // Preload avatars
   useEffect(() => {
     if (!isOpen) return
-    const urls = players.map((p) => p?.avatarImage?.url).filter(Boolean)
-    urls.forEach((u) => {
-      const img = new Image()
-      img.src = u
-      img.decode?.().catch(() => {})
-    })
+    players
+      .map((p) => p?.avatarImage?.url)
+      .filter(Boolean)
+      .forEach((u) => {
+        const img = new Image()
+        img.src = u
+        img.decode?.().catch(() => {})
+      })
   }, [isOpen, players])
+
+  // Content reveal — waits for splash to close
+  useEffect(() => {
+    if (!isOpen) {
+      setContentReady(false)
+      return
+    }
+
+    let tid = null
+
+    const reveal = () => {
+      tid = window.setTimeout(() => setContentReady(true), CONTENT_REVEAL_DELAY_MS)
+    }
+
+    try {
+      if (sessionStorage.getItem('phantasm:splashFullyClosed') === '1') {
+        reveal()
+        return () => {
+          if (tid) window.clearTimeout(tid)
+        }
+      }
+    } catch {}
+
+    setContentReady(false)
+
+    const onClose = () => reveal()
+    const onReopen = () => {
+      if (tid) window.clearTimeout(tid)
+      setContentReady(false)
+    }
+
+    window.addEventListener('phantasm:splashFullyClosed', onClose)
+    window.addEventListener('phantasm:splashOpened', onReopen)
+
+    return () => {
+      window.removeEventListener('phantasm:splashFullyClosed', onClose)
+      window.removeEventListener('phantasm:splashOpened', onReopen)
+      if (tid) window.clearTimeout(tid)
+    }
+  }, [isOpen])
+
+  // Pick player
   const pick = (p) => {
     const payload = {
       id: p.id,
@@ -56,159 +221,153 @@ export default function AvatarGate({ config, allowOpen = true }) {
     } catch {}
   }
 
-  const ease = [0.22, 1, 0.36, 1]
-
-  // ── Title: slides in from bottom, stops right above cards ──
-  const titleV = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease } },
-  }
-
-  // ── Cards: unfold from vertical center outward, after title ──
-  const cardV = {
-    hidden: { opacity: 0, scaleY: 0 },
-    show: (i) => ({
-      opacity: 1,
-      scaleY: 1,
-      transition: {
-        delay: 0.5 + i * 0.08, // title finishes ~0.4s, then cards start
-        duration: 0.55,
-        ease,
-      },
-    }),
-    exit: (i) => ({
-      opacity: 0,
-      scaleY: 0,
-      transition: { delay: i * 0.03, duration: 0.2, ease },
-    }),
-  }
+  // Card entrance: staggered pixel-rows-wipe via CSS
+  // Each card gets a slightly later animation-delay
+  const cardEntranceStyle = (idx) => ({
+    animation: contentReady
+      ? `pixel-rows-wipe 0.55s steps(8, end) ${1.1 + idx * 0.18}s both`
+      : 'none',
+    willChange: 'clip-path',
+  })
 
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
           className="fixed inset-0 z-[9999]"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
+          variants={overlayV}
+          initial="hidden"
+          animate="show"
+          exit="exit"
         >
+          {/* Backdrop */}
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+
+          {/* Scroll container */}
           <div
             className="absolute inset-0 z-[1] overflow-y-auto"
             data-overlay-scroll="true"
             style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
           >
-            <div className="min-h-full flex items-center justify-center py-8 px-4">
-              {' '}
-              <div className="flex flex-col items-center gap-3 w-[min(1200px,100%)]">
-                {/* ── Title ── */}
-                <motion.div variants={titleV} initial="hidden" animate="show" className="w-full">
-                  <PixelFrameOverlay
-                    frameSrc="/frames/title-fram.png"
-                    slice={9}
-                    bw={9}
-                    pad={0}
-                    className="w-full text-center"
-                  >
-                    <div className="bg-[#951212] rounded-xl md:p-0 py-3">
-                      <p className="text-white text-[22px] sm:text-[45px] whitespace-nowrap text-center">
-                        {String(title).toUpperCase()}{' '}
-                      </p>
-                    </div>
-                  </PixelFrameOverlay>
-                </motion.div>
-
-                {/* ── Cards grid ── */}
-                <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-stretch gap-0 md:px-5 px-1">
-                  {players.map((p, idx) => {
-                    const img = p.avatarImage?.url
-                    const label = p.badgeLabel || p.name || 'PLAYER'
-                    const desc = p.description || ''
-
-                    return (
-                      <motion.button
-                        key={p.id || idx}
-                        type="button"
-                        custom={idx}
-                        variants={cardV}
-                        initial="hidden"
-                        animate="show"
-                        exit="exit"
-                        onClick={() => pick(p)}
-                        whileHover={{
-                          y: -2,
-                          transition: { type: 'spring', stiffness: 240, damping: 24 },
-                        }}
-                        whileTap={{
-                          y: 2,
-                          scale: 0.98,
-                          transition: { type: 'spring', stiffness: 200, damping: 28 },
-                        }}
-                        className="origin-center rounded-md bg-[#2A1616] text-left cursor-pointer
-                          focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 h-full"
-                        style={{ transformOrigin: '50% 50%' }}
-                      >
+            <div className="min-h-full flex items-center justify-center px-4 py-8">
+              <div className="flex w-[min(1200px,100%)] flex-col items-center gap-3">
+                <AnimatePresence mode="wait">
+                  {contentReady ? (
+                    <motion.div
+                      key="avatar-gate-content"
+                      className="w-full"
+                      initial="hidden"
+                      animate="show"
+                      exit="hidden"
+                    >
+                      {/* ── Title ── */}
+                      <motion.div variants={titleV} className="w-full">
                         <PixelFrameOverlay
-                          frameSrc="/frames/CardFrame.png"
+                          frameSrc="/frames/title-fram.png"
                           slice={9}
                           bw={9}
-                          pad={5}
-                          className="flex items-start md:inline-block h-full"
+                          pad={0}
+                          className="w-full text-center"
                         >
-                          {/* image */}
-
-                          <PixelFrameOverlay
-                            frameSrc="/frames/imgFrame.png"
-                            slice={9}
-                            bw={9}
-                            pad={5}
-                            className="my-[3px] sm:mt-[4px] mx-[4px] md:w-auto w-[130px] shrink-0"
-                          >
-                            <div
-                              className="h-[150px] sm:h-[190px] flex items-center justify-center
-                                     bg-black/25 border-b border-white/15 overflow-hidden"
-                            >
-                              {img ? (
-                                <PremiumImage
-                                  src={img}
-                                  alt={p.name || 'player'}
-                                  ratio="1/1"
-                                  contain
-                                  skeleton={false}
-                                  pixelated
-                                  sizes="(max-width: 640px) 130px, 190px"
-                                  className="h-[150px] sm:h-[190px] w-[130px] sm:w-[190px]"
-                                />
-                              ) : (
-                                <div className="text-white/40 text-xs">NO IMAGE</div>
+                          <div className="rounded-xl bg-[#951212] py-3 md:p-0">
+                            <p className="whitespace-nowrap text-center text-[22px] text-white sm:text-[45px]">
+                              {typedTitle}
+                              {typedTitle.length < String(title).toUpperCase().length && (
+                                <span
+                                  className="animate-pulse opacity-60"
+                                  style={{ fontSize: '0.55em', verticalAlign: 'middle' }}
+                                >
+                                  █
+                                </span>
                               )}
-                            </div>
-
-                            {/* badge */}
-                            <PixelFrameOverlay
-                              frameSrc="/frames/titleFrame.png"
-                              slice={9}
-                              bw={9}
-                              pad={0}
-                            >
-                              <div className="bg-[#b01010] mb-1">
-                                <div className="md:px-3 p-1 py-2 text-center text-white  tracking-[0.18em] md:text-[15px] text-[12px]">
-                                  {String(label).toUpperCase()}
-                                </div>
-                              </div>
-                            </PixelFrameOverlay>
-                          </PixelFrameOverlay>
-
-                          {/* description */}
-                          <div className="px-4 py-5 md:text-[15px] text-[13px] leading-relaxed text-white/85 whitespace-pre-line">
-                            {desc}
+                            </p>
                           </div>
                         </PixelFrameOverlay>
-                      </motion.button>
-                    )
-                  })}
-                </div>
+                      </motion.div>
+
+                      {/* ── Cards grid ── */}
+                      <motion.div
+                        variants={cardsWrapV}
+                        className="mt-6 grid w-full grid-cols-1 items-stretch gap-0 px-1 sm:grid-cols-2 md:px-5 lg:grid-cols-4"
+                      >
+                        {players.map((p, idx) => {
+                          const img = p.avatarImage?.url
+                          const label = p.badgeLabel || p.name || 'PLAYER'
+                          const desc = p.description || ''
+
+                          return (
+                            <div
+                              key={p.id || idx}
+                              className="avatar-card origin-center cursor-pointer"
+                              style={cardEntranceStyle(idx)}
+                              onClick={() => pick(p)}
+                            >
+                              {/* Inner wrapper — receives hover bounce */}
+                              <div className="avatar-card__inner h-full">
+                                <button
+                                  type="button"
+                                  className="h-full w-full rounded-md bg-[#2A1616] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                                >
+                                  <PixelFrameOverlay
+                                    frameSrc="/frames/CardFrame.png"
+                                    slice={9}
+                                    bw={9}
+                                    pad={5}
+                                    className="flex h-full items-start md:inline-block"
+                                  >
+                                    <PixelFrameOverlay
+                                      frameSrc="/frames/imgFrame.png"
+                                      slice={9}
+                                      bw={9}
+                                      pad={5}
+                                      className="mx-[4px] my-[3px] w-[130px] shrink-0 sm:mt-[4px] md:w-auto"
+                                    >
+                                      <div className="flex h-[150px] items-center justify-center overflow-hidden border-b border-white/15 bg-black/25 sm:h-[190px]">
+                                        {img ? (
+                                          <PremiumImage
+                                            src={img}
+                                            alt={p.name || 'player'}
+                                            ratio="1/1"
+                                            contain
+                                            skeleton={false}
+                                            pixelated
+                                            sizes="(max-width: 640px) 130px, 190px"
+                                            className="h-[150px] w-[130px] sm:h-[190px] sm:w-[190px]"
+                                          />
+                                        ) : (
+                                          <div className="text-xs text-white/40">NO IMAGE</div>
+                                        )}
+                                      </div>
+
+                                      <PixelFrameOverlay
+                                        frameSrc="/frames/titleFrame.png"
+                                        slice={9}
+                                        bw={9}
+                                        pad={0}
+                                      >
+                                        <div className="mb-1 bg-[#b01010]">
+                                          <div className="p-1 py-2 text-center text-[12px] tracking-[0.18em] text-white md:px-3 md:text-[15px]">
+                                            {String(label).toUpperCase()}
+                                          </div>
+                                        </div>
+                                      </PixelFrameOverlay>
+                                    </PixelFrameOverlay>
+
+                                    <div className="whitespace-pre-line px-4 py-5 text-[13px] leading-relaxed text-white/85 md:text-[15px]">
+                                      {desc}
+                                    </div>
+                                  </PixelFrameOverlay>
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </motion.div>
+                    </motion.div>
+                  ) : (
+                    <div key="avatar-gate-empty-stage" className="h-[420px] w-full" />
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>

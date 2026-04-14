@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import PixelFrameOverlay from '@/components/ui/PixelFrameOverlay'
 
+// ─── Typewriter hook ─────────────────────────────────────────────────────────
 function useTypewriter(text, { speed = 14, enabled = true } = {}) {
   const [out, setOut] = useState('')
   const [typing, setTyping] = useState(false)
@@ -15,6 +16,7 @@ function useTypewriter(text, { speed = 14, enabled = true } = {}) {
     textRef.current = String(text ?? '')
     idxRef.current = 0
     setOut('')
+
     if (!enabled) {
       setOut(textRef.current)
       setTyping(false)
@@ -22,6 +24,7 @@ function useTypewriter(text, { speed = 14, enabled = true } = {}) {
     }
 
     setTyping(true)
+
     const tick = () => {
       const full = textRef.current
       idxRef.current += 1
@@ -44,30 +47,45 @@ function useTypewriter(text, { speed = 14, enabled = true } = {}) {
   return { out, typing }
 }
 
-export default function IslandBootDock({
-  open,
-  onClose,
-  player,
-  pages,
-  typingSpeed = 14, // ✅ تتحكم منين في سرعة الكتابة
-}) {
+// ─── Component ───────────────────────────────────────────────────────────────
+export default function IslandBootDock({ open, onClose, player, pages, typingSpeed = 14 }) {
   const safePages = useMemo(() => (Array.isArray(pages) ? pages.filter(Boolean) : []), [pages])
+
   const [pageIndex, setPageIndex] = useState(0)
+  const [animKey, setAnimKey] = useState(0)
+  const [closing, setClosing] = useState(false)
 
   useEffect(() => {
-    if (open) setPageIndex(0)
+    if (open) {
+      setPageIndex(0)
+      setAnimKey((k) => k + 1)
+      setClosing(false)
+    }
   }, [open])
+
+  // text 0.72s + avatar delay 0.56s + avatar 0.80s ≈ 1440ms
+  const EXIT_DURATION = 1440
+
+  const handleClose = (e) => {
+    e?.stopPropagation()
+    if (closing) return
+    setClosing(true)
+    window.setTimeout(() => {
+      setClosing(false)
+      onClose?.()
+    }, EXIT_DURATION)
+  }
 
   const hasPrev = pageIndex > 0
   const hasNext = pageIndex < safePages.length - 1
 
   const currentText = String(safePages[pageIndex] ?? '')
-  const { out, typing } = useTypewriter(currentText, { speed: typingSpeed, enabled: true })
+  const { out, typing } = useTypewriter(currentText, { speed: typingSpeed, enabled: open })
 
   useEffect(() => {
     if (!open) return
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose?.()
+      if (e.key === 'Escape') handleClose()
       if (e.key === 'ArrowRight') setPageIndex((i) => Math.min(safePages.length - 1, i + 1))
       if (e.key === 'ArrowLeft') setPageIndex((i) => Math.max(0, i - 1))
     }
@@ -75,77 +93,97 @@ export default function IslandBootDock({
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose, safePages.length])
 
-  if (!open) return null
-  if (!safePages.length) return null
-
-  const dockV = {
-    hidden: { opacity: 0, y: 16, scale: 0.98, filter: 'blur(4px)' },
-    show: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      filter: 'blur(0px)',
-      transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
-    },
-    exit: { opacity: 0, y: 12, scale: 0.985, filter: 'blur(4px)', transition: { duration: 0.2 } },
-  }
+  if (!open || !safePages.length) return null
 
   const playerName = player?.name || 'PLAYER'
   const avatarSrc = player?.avatarSrc
+
+  const wrapV = {
+    hidden: { opacity: 0, y: 10 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+    },
+    exit: {
+      opacity: 0,
+      y: 8,
+      transition: { duration: 0.18, delay: 1.1 },
+    },
+  }
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
+          key="dock-root"
           className="fixed left-1/2 bottom-4 -translate-x-1/2 z-[90] pointer-events-auto"
-          variants={dockV}
+          variants={wrapV}
           initial="hidden"
           animate="show"
           exit="exit"
         >
-          {/* ✅ بوكسين منفصلين جنب بعض */}
           <div
             className="flex items-start gap-0"
             style={{ width: 'min(860px, calc(100vw - 24px))' }}
           >
-            {/* AVATAR BOX */}
-            <PixelFrameOverlay
-              frameSrc="/frames/dock-frame.png"
-              slice={12}
-              bw={12}
-              pad={0}
-              innerClassName="overflow-hidden"
+            {/* ════════════════════════════════════════════
+                AVATAR BOX — whole box scales up from bottom
+            ════════════════════════════════════════════ */}
+            <div
+              key={`av-${animKey}`}
+              className={closing ? 'dock-avatar-exit' : 'dock-avatar-enter'}
             >
-              <div className="flex md:w-auto w-[100px] flex-wrap p-[6px] px-[6px] mb-1 ">
-                <div className="w-full flex justify-center items-start overflow-hidden">
-                  <img
-                    src={avatarSrc}
-                    alt={playerName}
-                    draggable={false}
-                    className="block h-[74px] sm:h-[84px] w-auto scale-[1.6] origin-top"
-                    style={{ imageRendering: 'pixelated' }}
-                  />
-                </div>
-                <PixelFrameOverlay
-                  frameSrc="/frames/titleFrame.png"
-                  slice={12}
-                  bw={12}
-                  pad={0}
-                  className="w-full"
+              <PixelFrameOverlay
+                frameSrc="/frames/dock-frame.png"
+                slice={12}
+                bw={12}
+                pad={0}
+                innerClassName="overflow-hidden"
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '6px',
+                    marginBottom: '4px',
+                  }}
                 >
-                  {/* name badge */}
-                  <div className="bg-[#b01010] px-2 py-1 text-center rounded-lg">
-                    <div className="text-white font-bold tracking-[0.12em] text-[10px] sm:text-[11px] uppercase">
-                      {playerName}
-                    </div>
+                  <div className="w-full flex justify-center items-start overflow-hidden">
+                    <img
+                      src={avatarSrc}
+                      alt={playerName}
+                      draggable={false}
+                      className="block h-[74px] sm:h-[84px] w-auto scale-[1.6] origin-top"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
                   </div>
-                </PixelFrameOverlay>
-              </div>
-            </PixelFrameOverlay>
 
-            {/* TEXT BOX */}
-            <div className="relative flex-1 min-w-0">
-              {/* typing bubble indicator (يظهر وهو بيكتب) */}
+                  <PixelFrameOverlay
+                    frameSrc="/frames/titleFrame.png"
+                    slice={12}
+                    bw={12}
+                    pad={0}
+                    className="w-full mt-1"
+                  >
+                    <div className="bg-[#b01010] px-2 py-1 text-center rounded-lg">
+                      <div className="text-white font-bold tracking-[0.12em] text-[10px] sm:text-[11px] uppercase">
+                        {playerName}
+                      </div>
+                    </div>
+                  </PixelFrameOverlay>
+                </div>
+              </PixelFrameOverlay>
+            </div>
+
+            {/* ════════════════════════════════════════════
+                TEXT BOX — whole box scales from right → left
+            ════════════════════════════════════════════ */}
+            <div
+              key={`tx-${animKey}`}
+              className={`relative flex-1 min-w-0 ${closing ? 'dock-text-exit' : 'dock-text-enter'}`}
+            >
+              {/* Typing indicator */}
               <AnimatePresence>
                 {typing && (
                   <motion.div
@@ -169,29 +207,26 @@ export default function IslandBootDock({
                 pad={10}
                 className="w-full"
                 bgClass="bg-[#2b1a1a]/95"
-                innerClassName="overflow-hidden "
+                innerClassName="overflow-hidden"
               >
-                <div className="relative min-h-[105px] p-3 md:p-5 ">
-                  {/* النص */}
+                <div className="relative min-h-[105px] p-3 md:p-5">
+                  {/* Text */}
                   <div className="pb-2">
                     <div className="text-white/90 text-[10px] sm:text-[11px] leading-[1.55] tracking-[0.14em] uppercase whitespace-pre-wrap">
                       {out}
-                      {/* caret صغير */}
-                      {typing ? <span className="inline-block w-[8px]">▮</span> : null}
+                      {typing && <span className="inline-block w-[8px]">▮</span>}
                     </div>
                   </div>
 
-                  {/* ✅ الأسهم: Back + Next */}
+                  {/* Nav arrows */}
                   <div className="absolute bottom-2 right-2 flex items-center gap-1">
                     <button
                       type="button"
                       disabled={!hasPrev}
                       onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
-                      className="flex items-center justify-center
-                                 disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
                       aria-label="Previous"
                     >
-                      {/* pixel-ish left arrow */}
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="15"
@@ -248,11 +283,9 @@ export default function IslandBootDock({
                       type="button"
                       disabled={!hasNext}
                       onClick={() => setPageIndex((i) => Math.min(safePages.length - 1, i + 1))}
-                      className="flex items-center justify-center
-                                 disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
                       aria-label="Next"
                     >
-                      {/* pixel-ish right arrow */}
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="15"
@@ -305,13 +338,12 @@ export default function IslandBootDock({
                       </svg>
                     </button>
                   </div>
+
+                  {/* Close button */}
                   <button
                     type="button"
                     onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onClose?.()
-                    }}
+                    onClick={handleClose}
                     className="z-5 cursor-pointer absolute -top-6 -right-6 flex items-center gap-1"
                     aria-label="Close dock"
                   >

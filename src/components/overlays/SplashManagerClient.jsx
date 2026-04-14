@@ -70,6 +70,8 @@ export default function SplashManagerClient({
 
     try {
       sessionStorage.removeItem('phantasm:sceneReady')
+      sessionStorage.removeItem('phantasm:splashFullyClosed')
+      window.dispatchEvent(new CustomEvent('phantasm:splashOpened'))
     } catch {}
   }
 
@@ -83,6 +85,8 @@ export default function SplashManagerClient({
 
     try {
       sessionStorage.removeItem('phantasm:sceneReady')
+      sessionStorage.removeItem('phantasm:splashFullyClosed')
+      window.dispatchEvent(new CustomEvent('phantasm:splashOpened'))
     } catch {}
   }
 
@@ -191,6 +195,19 @@ export default function SplashManagerClient({
       }
     }
   }, [pathname, open])
+
+  useEffect(() => {
+    if (open) return
+
+    const id = window.setTimeout(() => {
+      try {
+        sessionStorage.setItem('phantasm:splashFullyClosed', '1')
+        window.dispatchEvent(new CustomEvent('phantasm:splashFullyClosed'))
+      } catch {}
+    }, 40)
+
+    return () => window.clearTimeout(id)
+  }, [open])
 
   return <SplashOverlay open={open} isInstant={isInstant} />
 }

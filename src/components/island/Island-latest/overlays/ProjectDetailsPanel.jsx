@@ -7,14 +7,17 @@ import PixelScrollTrack from '@/components/island/Island-latest/overlays/compone
 import PixelDivider from '@/components/island/Island-latest/overlays/components/PixelDivider'
 import useSplashRouter from '@/components/overlays/useSplashRouter'
 import PremiumImage from '@/components/ui/PremiumImage'
+
+// Mobile bottom sheet — slides up from bottom
 const sheetV = {
-  hidden: { y: 28, opacity: 0, filter: 'blur(6px)' },
-  show: { y: 0, opacity: 1, filter: 'blur(0px)', transition: { duration: 0.24 } },
-  exit: { y: 28, opacity: 0, filter: 'blur(6px)', transition: { duration: 0.18 } },
+  hidden: { y: '100%', opacity: 0 },
+  show: { y: 0, opacity: 1, transition: { duration: 0.38, ease: [0.22, 1, 0.36, 1] } },
+  exit: { y: '100%', opacity: 0, transition: { duration: 0.28, ease: [0.55, 0, 0.78, 0] } },
 }
+
 export default function ProjectDetailsPanel({
   open,
-  placement = 'right', // 'right' | 'left' | 'top'
+  placement = 'right',
   project,
   onClose,
   width,
@@ -24,7 +27,6 @@ export default function ProjectDetailsPanel({
   const isMobileSheet = placement === 'top'
   const panelW = width || (isMobileSheet ? '100%' : 560)
 
-  // ✅ ESC يقفل
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') onClose?.()
@@ -33,61 +35,32 @@ export default function ProjectDetailsPanel({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const go = useCallback(
-    (newScrollTop) => {
-      const slug = project?.slug || project?.id
-      if (!slug) return
-      window.dispatchEvent(new CustomEvent('phantasm:splashStart', { detail: { minMs: 750 } }))
-      splashRouter.push(`/project-details/${slug}`)
-    },
-    [project, splashRouter],
-  )
+  const go = useCallback(() => {
+    const slug = project?.slug || project?.id
+    if (!slug) return
+    window.dispatchEvent(new CustomEvent('phantasm:splashStart', { detail: { minMs: 750 } }))
+    splashRouter.push(`/project-details/${slug}`)
+  }, [project, splashRouter])
 
-  // Animations
+  // Desktop: scaleX from anchor side (handled in ProjectsOverlay via detailsV)
+  // Panel itself just renders without its own enter/exit — parent wraps it in motion.div
+  // Mobile: uses sheetV below
 
-  const desktopV = useMemo(
-    () => ({
-      hidden: {
-        opacity: 0,
-        x: placement === 'left' ? -12 : 12,
-        y: 0,
-        scale: 0.99,
-        filter: 'blur(6px)',
-      },
-      show: {
-        opacity: 1,
-        x: 0,
-        y: 0,
-        scale: 1,
-        filter: 'blur(0px)',
-        transition: { duration: 0.22 },
-      },
-      exit: {
-        opacity: 0,
-        x: placement === 'left' ? -10 : 10,
-        scale: 0.99,
-        filter: 'blur(6px)',
-        transition: { duration: 0.18 },
-      },
-    }),
-    [placement],
-  )
   if (!open || !project) return null
 
   return (
     <AnimatePresence>
-      {/* Mobile Bottom Sheet */}
       {isMobileSheet ? (
         <motion.div
+          key="pdp-mobile"
           className="fixed inset-0 z-[95] pointer-events-auto"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.22 }}
         >
-          {/* backdrop */}
           <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-          {/* sheet */}
           <motion.div
             className="absolute left-0 right-0 bottom-0"
             variants={sheetV}
@@ -97,18 +70,15 @@ export default function ProjectDetailsPanel({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-3 pb-3">
-              {/* handle */}
               <div className="mx-auto mb-2 h-1 w-14 rounded-full bg-white/25" />
-
               <PixelFrameOverlay
                 frameSrc="/frames/dock-frame.png"
                 slice={12}
                 bw={12}
                 pad={0}
-                className="w-full "
+                className="w-full"
               >
                 <div className="bg-[#2b1a1a]/95 relative">
-                  {/* close */}
                   <div onClick={onClose} className="z-10 cursor-pointer absolute -top-3 -right-3">
                     <PremiumImage
                       src="/close.png"
@@ -119,7 +89,6 @@ export default function ProjectDetailsPanel({
                       className="w-8 h-8"
                     />
                   </div>
-
                   <DetailsContent project={project} onGo={go} />
                 </div>
               </PixelFrameOverlay>
@@ -127,15 +96,8 @@ export default function ProjectDetailsPanel({
           </motion.div>
         </motion.div>
       ) : (
-        /*  Desktop side panel */
-        <motion.div
-          className="pointer-events-auto"
-          style={{ width: panelW }}
-          variants={desktopV}
-          initial="hidden"
-          animate="show"
-          exit="exit"
-        >
+        /* Desktop — parent (ProjectsOverlay) wraps this in motion.div with detailsV */
+        <div key="pdp-desktop" style={{ width: panelW }} className="pointer-events-auto">
           <PixelFrameOverlay
             frameSrc="/frames/dock-frame.png"
             slice={12}
@@ -154,11 +116,10 @@ export default function ProjectDetailsPanel({
                   className="w-8 h-8"
                 />
               </div>
-
               <DetailsContent project={project} onGo={go} />
             </div>
           </PixelFrameOverlay>
-        </motion.div>
+        </div>
       )}
     </AnimatePresence>
   )
@@ -166,41 +127,28 @@ export default function ProjectDetailsPanel({
 
 function DetailsContent({ project, onGo }) {
   const title = project?.projectName || 'PROJECT'
-  const text =
-    project?.panelIntro ||
-    'HERE IS A INTRO FOR THE ISLAND AND MORE INTRO HERE IS A INTRO FOR THE ISLAND AND MORE INTRO...'
-
+  const text = project?.panelIntro || 'HERE IS A INTRO FOR THE ISLAND AND MORE INTRO...'
   const singleImage = project.singleImage
-  //  Scroll plumbing for PixelScrollTrack
-  const scrollRef = useRef(null)
-  const [scrollState, setScrollState] = useState({
-    scrollTop: 0,
-    scrollHeight: 0,
-    clientHeight: 0,
-  })
 
-  // heights
+  const scrollRef = useRef(null)
+  const [scrollState, setScrollState] = useState({ scrollTop: 0, scrollHeight: 0, clientHeight: 0 })
+
   const TEXT_MIN_H = 110
   const TEXT_MAX_H = 140
-  const TRACK_H = TEXT_MAX_H
 
   useLayoutEffect(() => {
     const el = scrollRef.current
     if (!el) return
-
-    const update = () => {
+    const update = () =>
       setScrollState({
         scrollTop: el.scrollTop,
         scrollHeight: el.scrollHeight,
         clientHeight: el.clientHeight,
       })
-    }
-
     update()
     el.addEventListener('scroll', update, { passive: true })
     const ro = new ResizeObserver(update)
     ro.observe(el)
-
     return () => {
       el.removeEventListener('scroll', update)
       ro.disconnect()
@@ -208,21 +156,19 @@ function DetailsContent({ project, onGo }) {
   }, [text])
 
   const needsScroll = scrollState.scrollHeight > scrollState.clientHeight + 1
-
-  const handleScrollTo = useCallback((newScrollTop) => {
-    if (scrollRef.current) scrollRef.current.scrollTop = newScrollTop
+  const handleScrollTo = useCallback((t) => {
+    if (scrollRef.current) scrollRef.current.scrollTop = t
   }, [])
+
   return (
     <div className="flex flex-col-reverse md:flex-row gap-0 md:items-stretch">
       {/* LEFT: text */}
       <div className="flex-1 min-w-0 p-4 md:p-5 md:basis-[58%] md:flex-none">
-        <div className="text-white  tracking-[0.14em] text-[13px] sm:text-[15px] uppercase mb-3">
+        <div className="text-white tracking-[0.14em] text-[13px] sm:text-[15px] uppercase mb-3">
           {title}
         </div>
-
         <PixelDivider align="start" color="#5C3131" height={2} className="my-3" />
 
-        {/*  text area + pixel scrollbar */}
         <div className="flex items-start gap-[6px]">
           <div
             ref={scrollRef}
@@ -235,7 +181,6 @@ function DetailsContent({ project, onGo }) {
               overflowX: 'hidden',
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
-
               touchAction: 'pan-y',
               WebkitOverflowScrolling: 'touch',
             }}
@@ -244,13 +189,12 @@ function DetailsContent({ project, onGo }) {
               {text}
             </div>
           </div>
-
           {needsScroll ? (
             <PixelScrollTrack
               scrollTop={scrollState.scrollTop}
               scrollHeight={scrollState.scrollHeight}
               clientHeight={scrollState.clientHeight}
-              trackHeight={TRACK_H}
+              trackHeight={TEXT_MAX_H}
               onScrollTo={handleScrollTo}
             />
           ) : null}
@@ -275,7 +219,7 @@ function DetailsContent({ project, onGo }) {
         </div>
       </div>
 
-      {/* RIGHT: images */}
+      {/* RIGHT: image */}
       <div className="w-full p-[2px] pr-[5px] md:basis-[42%] md:flex-none flex rounded-t-2xl md:rounded-r-2xl bg-white items-center justify-center">
         {singleImage ? (
           <div className="w-full h-full flex items-center justify-center">
